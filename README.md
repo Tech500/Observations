@@ -28,4 +28,5 @@ Features:
  9. Audible alert from Piezo electric buzzer when there is Barometric Pressure difference of .020 inches of Mercury. I am interested in sudden drop of Barometric Pressure in a 15 minute interval.  Serve weather more likely with a sudden drop. Difference of .020 inches of Mercury point is set for my observations to log and sound audible alert; not based on any known value to be associated  with serve weather.
 
  10.    Two-line LCD Display of Barometric Pressure, in both inches of Mercury and millibars.
+
 Server is a WeMOS D1 R2 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 ~ $ 4.00; both are required for project. Sensor is located indoors, currently.
