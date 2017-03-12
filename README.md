@@ -1,7 +1,7 @@
 # Observations
 Data logger and dynamic web server utilizing SPIFFS.
 
-README.TXT:  March 12, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
+March 12, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
 
 
 Internet Weather Datalogger and Dynamic Web server
@@ -18,12 +18,11 @@ Features:
 
      4.	LOG.TXT file is appended every 15 minutes with the latest update; storing data from Dynamic web page.
 
-     5.	ACCESS.TXT restricted file that logs client IP address.  Removed due to multiple clicks on links to open a page.
+     5.	ACCESS.TXT restricted file that logs client IP address. 
 
-     6.	DIFFER.TXT stores the difference in barometric pressure for the last fifteen minutes. Only a difference of equal to or greater than .020 inches of Mercury are 
-        logged with difference, date and time.
+     6.	DIFFER.TXT stores the difference in Barometric Pressure for the last fifteen minutes. Only a difference of equal to or greater than .020 inches of Mercury are logged with difference, date and time.
 
-     7.	SERVER.TXT is used to record RESETS; both "Manual" and "atchDog." Wireless Re-connects from lost of wireless connectivity are also logged to SERVER.TXT..
+     7.	SERVER.TXT is used to record RESETS; both "Manual" and "WatchDog." Wireless Re-connects from lost of wireless connectivity are also logged to SERVER.TXT..
 
      8.	URL file names other than ones defined in the Sketch produce "404 Page not found."
 
