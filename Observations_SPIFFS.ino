@@ -1,0 +1,1074 @@
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//                NEW:   Supports WeMos D1 R2 Dev. Based Developement Board 
+//                        
+//                       listFiles and readFile by martinayotte of ESP8266 Community               
+//                       
+//                         
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/12/2017 11:30 EST
+//                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
+//
+//                       Project is open-Source    
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// ********************************************************************************
+// ********************************************************************************
+//
+//   See invidual library downloads for each library license.
+//
+//   Following code was developed using the Adafruit CC300 library, "HTTPServer" example.
+//   and by merging library examples, adding logic for Sketch flow.
+//
+// *********************************************************************************
+// *********************************************************************************
+
+
+#include <Wire.h>
+#include <DS3231.h>
+#include <ESP8266WiFi.h>
+#include <FS.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+//#include <LiquidCrystal_I2C.h>
+#include "SPIFlash.h"
+
+// Replace with your network details
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
+
+//IPAddress ip(10,0,0,50);   // The address 192.168.0.53 is arbitary, if could be any address in the range of your router, but not another device!
+//IPAddress gateway(10,0,0,1);  // My router has this base address
+//IPAddress subnet(255,255,255,0); // Define the sub-network
+
+float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
+
+char temperatureFString[6];
+char heat_indexString[6];
+char humidityString[6];
+char dew_pointString[6];
+char pressureString[7];
+char pressureInchString[6];
+
+int count = 0;
+
+Adafruit_BME280 bme; // Note Adafruit assumes I2C adress = 0x77 my module (eBay) uses 0x76 so the library address has been changed.
+
+#define SEALEVELPRESSURE_HPA (1014.5)   //1022.4
+
+//Real Time Clock used  DS3231
+DS3231 Clock;
+
+bool Century=false;
+bool h12;
+bool PM;
+
+
+int year, month, date, DoW, hour, minute, second;
+
+//use I2Cscanner to find LCD display address, in this case 3F   //https://github.com/todbot/arduino-i2c-scanner/
+//LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
+
+String logName;    //String object for constructing log file name from current date
+
+#define sonalertPin 9  // pin for Piezo buzzer
+
+#define BUFSIZE 64  //Size of read buffer for file download  -optimized for CC3000.
+
+float currentPressure;  //Present pressure reading used to find pressure change difference.
+float pastPressure;  //Previous pressure reading used to find pressure change difference.
+float milliBars;
+
+float difference;
+
+//long int id = 1;  //Increments record number
+
+char *filename;
+char str[] = {0};
+
+int timer;
+
+String temperatureF, heatindex, humidity, pressure, pressureinch, dewpoint;
+
+String dtStamp;
+String lastUpdate;
+String SMonth, SDay, SYear, SHour, SMin, SSec;
+
+String reConnect;
+
+String fileRead; 
+
+int fileDownload;   //File download status; 1 = file download has started, 0 = file has finished downloading
+
+char MyBuffer[13];
+
+#define LISTEN_PORT           8001    // What TCP port to listen on for connections.  
+// The HTTP protocol uses port 80 by default.
+
+#define MAX_ACTION            10      // Maximum length of the HTTP action that can be parsed.
+
+#define MAX_PATH              64      // Maximum length of the HTTP request path that can be parsed.
+// There isn't much memory available so keep this short!
+
+#define BUFFER_SIZE           MAX_ACTION + MAX_PATH + 20  // Size of buffer for incoming request data.
+// Since only the first line is parsed this
+// needs to be as large as the maximum action
+// and path plus a little for whitespace and
+// HTTP version.
+
+#define TIMEOUT_MS           250   // Amount of time in milliseconds to wait for     /////////default 500/////
+// an incoming request to finish.  Don't set this
+// too high or your server could be slow to respond.
+
+uint8_t buffer[BUFFER_SIZE+1];
+int bufindex = 0;
+char action[MAX_ACTION+1];
+char path[MAX_PATH+1];
+
+
+
+// Web Server on port 8001
+WiFiServer server(8001);
+WiFiClient client;
+
+
+     
+////////////////
+void setup(void)
+{
+
+     watchDog();
+
+     Serial.begin(115200);
+
+     Wire.begin(D3, D4);
+     //Wire.setClock(100000);
+     
+/*
+     Clock.setSecond(00);//Set the second 
+     Clock.setMinute(54);//Set the minute 
+     Clock.setHour(7);  //Set the hour 
+     Clock.setDoW(1);    //Set the day of the week
+     Clock.setDate(12);  //Set the date of the month
+     Clock.setMonth(3);  //Set the month of the year
+     Clock.setYear(17);  //Set the year (Last two digits of the year)
+*/
+
+     wdt_reset();
+
+// Connecting to WiFi network
+     Serial.println();
+     Serial.print("Connecting to ");
+     Serial.println(ssid);
+
+     WiFi.begin(ssid, password);
+     delay(10);
+
+     while (WiFi.status() != WL_CONNECTED)
+     {
+          delay(500);
+          Serial.print(".");
+     }
+     Serial.println("");
+     Serial.println("WiFi connected");
+
+     wdt_reset();
+
+    
+     // Starting the web server
+     //server.begin();
+     Serial.println("Web server running. Waiting for the ESP IP...");
+     delay(1000);
+
+     // Printing the ESP IP address
+     Serial.println(WiFi.localIP());
+
+     wdt_reset();
+
+
+     SPIFFS.begin();
+
+     //SPIFFS.format();
+
+     //SPIFFS.remove("/ACCESS.TXT");
+     
+     //pinMode(sonalertPin, OUTPUT);  //Used for Piezo buzzer
+
+     pinMode(D3, INPUT_PULLUP); //Set input (SDA) pull-up resistor on
+
+     if (!bme.begin())
+     {
+          Serial.println("Could not find a valid BME280 sensor, check wiring!");
+          while (1);
+     }
+
+     //Begin listening for connection
+     server.begin();
+
+     //lcdDisplay();      //   LCD 1602 Display function --used for inital display
+
+     Serial.flush();
+     Serial.end();
+
+}
+
+
+// How big our line buffer should be. 100 is plenty!
+#define BUFFER 100
+
+
+///////////
+void loop()
+{
+
+     
+     watchDog();  
+     
+     fileDownload = 0;
+
+     getDateTime();
+     
+     //Collect  "LOG.TXT" Data for one day; do it early so day of week still equals 7
+     if (((hour) == 23 )  &&
+               ((minute) == 57) &&
+               ((second) == 00))
+     {
+          newDay();
+     }
+
+     //Write Data at 15 minute interval
+
+     if ((((minute) == 0)||
+               ((minute) == 15)||
+               ((minute) == 30)||
+               ((minute) == 45))
+               && ((second) == 0))
+     {
+         
+
+          lastUpdate = dtStamp;   //store dtstamp for use on dynamic web page
+
+          updateDifference();  //Get Barometric Pressure difference
+
+          logtoSD();   //Output to SD Card  --Log to SD on 15 minute interval.
+
+          delay(10);  //Be sure there is enough SD write time
+
+          //lcdDisplay();      //   LCD 1602 Display function --used for 15 minute update
+
+          pastPressure = (bme_pressure *  0.000295333727);   //convert to inches mercury
+
+     }
+     else
+     {
+          listen();  //Listen for web client
+     }
+
+}
+
+//////////////
+void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
+{
+
+     Serial.begin(115200);
+
+     if(fileDownload == 1)   //File download has started
+     {
+          exit;   //Skip logging this time --file download in progress
+     }
+     else  
+     {
+
+          fileDownload = 1;
+
+          // Open a "log.txt" for appended writing
+          File log = SPIFFS.open("/LOG.TXT", "a");
+
+          if (!log)
+          {
+               Serial.println("file open failed");
+          }
+
+          //log.print(id);
+          //log.print(" , ");
+          log.print(dtStamp) + " EST";
+          log.print(" , ");
+          log.print("Humidity:  ");
+          log.print(bme_humidity);
+          log.print(" % , ");
+          log.print("Dew Point:  ");
+          log.print(dew_point * 1.8 +32);
+          log.print(" F. , ");
+          log.print(bme_temp * 1.8 + 32);
+          log.print("  F. , ");
+          // Reading temperature or humidity takes about 250 milliseconds!
+          // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+          log.print("Heat Index:  ");
+          log.print(heat_index * 1.8 + 32);
+          log.print(" F. ");
+          log.print(" , ");
+          log.print(bme_pressure * 0.02953, 3 );   //Convert hPA to inches of Mecury
+          log.print(" in. Hg. ");
+          log.print(" , ");
+
+          if (pastPressure == currentPressure)
+          {
+               log.print("0.000");
+               log.print(" Difference ");
+               log.print(" ,");
+          }
+          else
+          {
+               log.print((difference),3);
+               log.print(" Difference ");
+               log.print(", ");
+          }
+
+          log.print(bme_pressure, 1);  //Convert hPA to millibars
+          log.print(" millibars ");
+          log.print(" , ");
+          log.print(bme_pressure * 0.00098692326671601, 2);   //Convert hPA to Atm (atmospheric pressure)  
+          log.print(" atm ");
+          log.print(" , ");
+          log.print(bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084, 1);  //Convert meters to Feet           /////////////////////////////////////////
+          log.print(" Ft. ");
+          log.println();
+          //Increment Record ID number
+          //id++;
+          Serial.println("\nData written to log  " + dtStamp);
+          Serial.println("");
+
+          log.close();
+
+          fileDownload = 0;
+
+          if(abs(difference) >= .020)  //After testing and observations of Data; raised from .010 to .020 inches of Mecury
+          {
+               // Open a "Differ.txt" for appended writing --records Barometric Pressure change difference and time stamps
+               File diff = SPIFFS.open("/DIFFER.TXT", "a");
+
+               if (!diff)
+               {
+                    Serial.println("file open failed");
+               }
+
+               Serial.println("");
+               Serial.print("Difference greater than .020 inches of Mecury ,  ");
+               Serial.print(difference, 3);
+               Serial.print("  ,");
+               Serial.print(dtStamp);
+
+               diff.println("");
+               diff.print("Difference greater than .020 inches of Mecury,  ");
+               diff.print(difference, 3);
+               diff.print("  ,");
+               diff.print(dtStamp);
+               diff.close();
+
+               beep(50);  //Duration of Sonalert tone
+
+
+
+          }
+          Serial.flush();
+          Serial.end();
+     }
+     listen();
+}
+/*
+/////////////////
+void lcdDisplay()   //   LCD 1602 Display function
+{
+
+     lcd.clear();
+     // set up the LCD's number of rows and columns:
+     lcd.backlight();
+     lcd.noAutoscroll();
+     lcd.setCursor(0, 0);
+     // Print Barometric Pressure
+     lcd.print((bme280_pressure *  0.00029530),3);   //convert to inches mercury
+     lcd.print(" in. Hg.");
+     // set the cursor to column 0, line 1
+     // (note: line 1 is the second row, since counting begins with 0):
+     lcd.setCursor(0, 1);
+     // print millibars
+     lcd.print(((Pressure) * .01),3);   //convert to millibars
+     lcd.print(" mb.    ");
+     lcd.print("");
+
+}
+*/
+
+/////////////
+void listen()   // Listen for client connection
+{
+
+     client = server.available();
+
+     fileDownload = 0;   //No file being downloaded
+
+     Serial.begin(115200);
+
+     while(client.available())
+     {
+          if (client)
+          {
+
+               // Process this request until it completes or times out.
+               // Note that this is explicitly limited to handling one request at a time!
+
+               // Clear the incoming data buffer and point to the beginning of it.
+               bufindex = 0;
+               memset(&buffer, 0, sizeof(buffer));
+
+               // Clear action and path strings.
+               memset(&action, 0, sizeof(action));
+               memset(&path,   0, sizeof(path));
+
+               // Set a timeout for reading all the incoming data.
+               unsigned long endtime = millis() + TIMEOUT_MS;
+
+               // Read all the incoming data until it can be parsed or the timeout expires.
+               bool parsed = false;
+
+               while (!parsed && (millis() < endtime) && (bufindex < BUFFER_SIZE))
+               {
+
+                    if (client.available())
+                    {
+
+                         buffer[bufindex++] = client.read();
+
+                    }
+
+                    parsed = parseRequest(buffer, bufindex, action, path);
+
+               }
+
+               if(parsed)
+               {
+                    Serial.begin(115200);
+                    Serial.println();
+                    getDateTime();
+                    Serial.println("Client connected:  " + dtStamp);
+                    Serial.print("Client IP:  ");
+                    Serial.println(client.remoteIP());
+                    Serial.println(F("Processing request"));
+                    Serial.print(F("Action: "));
+                    Serial.println(action);
+                    Serial.print(F("Path: "));  
+                    Serial.println(path);
+
+                    getDateTime(); //get accessed date and time
+
+                    char ip1String[] = "10.0.0.146";   //Host ip address
+                    char ip2String[] = {client.remoteIP()};
+                    
+                    // Open a "access.txt" for appended writing.   Client access ip address logged.
+                     File logFile = SPIFFS.open("/ACCESS.TXT", "a"); 
+
+                    if (!logFile) 
+                    {
+                       Serial.println("File failed to open");  
+                    }
+     
+                         logFile.print("Accessed:  ");
+                         logFile.print(dtStamp + " -- ");
+                         logFile.print("Client IP:  ");
+                         logFile.print(client.remoteIP());
+                         logFile.print(" -- ");
+                         logFile.print("Path:  ");
+                         logFile.print(path);
+                         logFile.println("");
+                         logFile.close();
+                   
+                    // Check the action to see if it was a GET request.
+                    if (strncmp(path, "/Weather", 8) == 0)   // Respond with the path that was accessed.
+                    {
+
+
+                         getWeatherData();
+
+                         delay(200);
+
+                         fileDownload = 1;
+
+                         // First send the success response code.
+                         client.println("HTTP/1.1 200 OK");
+                         client.println("Content-Type: html");
+                         client.println("Connnection: close");
+                         client.println("Server: WEMOS D1 R2");
+                         // Send an empty line to signal start of body.
+                         client.println("");
+                         // Now send the response data.
+                         // output dynamic webpage
+                         client.println("<!DOCTYPE HTML>");
+                         client.println("<html>\r\n");
+                         client.println("<body>\r\n");
+                         client.println("<head><title>Weather Observations</title></head>");
+                         // add a meta refresh tag, so the browser pulls again every 15 seconds:
+                         //client.println("<meta http-equiv=\"refresh\" content=\"15\">");
+                         client.println("<h2>Treyburn Lakes</h2><br />");
+                         client.println("Indianapolis, IN 46239<br />");
+
+                         if(lastUpdate != NULL)
+                         {
+                              client.println("Last Update:  ");
+                              client.println(lastUpdate);
+                              client.println(" EST <br />");
+                         }
+
+                         client.println("Humidity:  ");
+                         client.print(bme_humidity, 1);
+                         client.print(" %<br />");
+                         client.println("Dew point:  ");
+                         client.print(dew_point * 1.8 +32, 1); 
+                         client.print(" F. <br />");  
+                         client.println("Temperature:  ");
+                         client.print(bme_temp * 1.8 + 32, 1);
+                         client.print(" F.<br />");
+                         client.println("Heat Index:  ");
+                         client.print(heat_index * 1.8 + 32, 1);
+                         client.print(" F. <br />");
+                         client.println("Barometric Pressure:  ");
+                         client.print(bme_pressure * 0.02953, 3);
+                         client.print(" in. Hg.<br />");
+
+                         if (pastPressure == currentPressure)
+                         {
+                              client.println(difference, 3);
+                              client.print(" Difference in. Hg <br />");
+                         }
+                         else
+                         {
+                              client.println(difference, 3);
+                              client.print(" Difference in. Hg <br />");
+                         }
+
+                         client.println("Barometric Pressure:  ");
+                         client.println(bme_pressure, 1);   //Convert hPA to millbars 
+                         client.println(" mb.<br />");
+                         client.println("Atmosphere:  ");
+                         client.print(bme_pressure * 0.00098692326671601, 2);   //Convert hPA to Atm (atmospheric pressure)
+                         client.print(" atm <br />");
+                         client.println("Altitude:  ");
+                         client.print(bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084, 1);  //Convert meters to Feet
+                         client.print(" Feet<br />");
+                         client.println("<br /><br />");
+                         client.println("<h2>Collected Observations</h2>");
+                         client.println("<a href=http://10.0.0.9:8001/LOG.TXT download>Current Week Observations</a><br />");
+                         client.println("<br />\r\n");
+                         client.println("<a href=http://10.0.0.9:8001/SdBrowse >Weekly Data Files</a><br />");
+                         client.println("<br />\r\n");
+                         client.println("<a href=http://10.0.0.9:8001/README.TXT download>Server:  README</a><br />");
+                         client.println("<br />\r\n");
+                         client.print("<H2>Client IP:  <H2>");
+                         client.print(client.remoteIP().toString().c_str());
+                         client.println("<body />\r\n");
+                         client.println("<br />\r\n");
+                         client.println("</html>\r\n");
+
+                         fileDownload = 0;
+
+                    }
+                    // Check the action to see if it was a GET request.
+                    else if (strcmp(path, "/SdBrowse") == 0) // Respond with the path that was accessed.
+                    {
+                         fileDownload = 1;
+
+                         // send a standard http response header
+                         client.println("HTTP/1.1 200 OK");
+                         client.println("Content-Type: text/html");
+                         client.println();
+                         client.println("<!DOCTYPE HTML>");
+                         client.println("<html>\r\n");
+                         client.println("<body>\r\n");
+                         client.println("<head><title>SDBrowse</title><head />");
+                         // print all the files, use a helper to keep it clean
+                         client.println("<h2>Server Files:</h2>");
+                         String str = String("<html><head></head>\r\n");
+                         
+                         if (!SPIFFS.begin()) 
+                         {
+                              Serial.println("SPIFFS failed to mount !\r\n");
+                         }
+                         Dir dir = SPIFFS.openDir("/");
+                         while (dir.next()) 
+                         {
+                              str += "<a href=\"";
+                              str += dir.fileName();
+                              str += "\">";
+                              str += dir.fileName();
+                              str += "</a>";
+                              str += "    ";
+                              str += dir.fileSize();
+                              str += "<br>\r\n";
+                         }
+                         str += "</body></html>\r\n";
+
+                         client.print(str); 
+                         client.println("<br /><br />\r\n");
+                         client.println("\n<a href=http://10.0.0.9:8001/Weather    >Current Observations</a><br />");
+                         client.println("<br />\r\n");
+                         client.println("<body />\r\n");
+                         client.println("<br />\r\n");
+                         client.println("</html>\r\n");
+
+                         fileDownload = 0;
+
+                    }
+                    else if((strncmp(path, "/LOG", 4) == 0) ||  (strcmp(path, "/ACCESS.TXT") == 0) || (strcmp(path, "/DIFFER.TXT") == 0)|| (strcmp(path, "/SERVER.TXT") == 0) || (strcmp(path, "/README.TXT") == 0))  // Respond with the path that was accessed.
+                    {
+
+                         fileDownload = 1;   //File download has started; used to stop log from logging during download
+
+                         char *filename;
+                         char name;
+                         strcpy( MyBuffer, path );
+                         filename = &MyBuffer[1];
+
+                         if ((strncmp(path, "/SYSTEM~1", 9) == 0) || (strncmp(path, "/ACCESS", 7) == 0))
+                         {
+
+                              client.println("HTTP/1.1 404 Not Found");
+                              client.println("Content-Type: text/html");
+                              client.println();
+                              client.println("<h2>404</h2>\r\n");
+                              delay(250);
+                              client.println("<h2>File Not Found!</h2>\r\n");
+                              client.println("<br /><br />\r\n");
+                              client.println("\n<a href=http://10.0.0.9:8001/SdBrowse    >Return to SPIFFS files list</a><br />");
+                         }
+                         else
+                         {
+
+                              client.println("HTTP/1.1 200 OK");
+                              client.println("Content-Type: text/plain");
+                              client.println("Content-Disposition: attachment");
+                              client.println("Content-Length:");
+                              client.println("Connnection: close");
+                              client.println();
+
+                                                  
+                              readFile();
+
+                         }
+
+                    }
+                    // Check the action to see if it was a GET request.
+                    else  if(strncmp(path, "/Grey", 8) == 0)
+                    {
+                         //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
+                         //404 File not Found!
+
+                         char *filename = "/ACCESS.TXT";
+                         strcpy(MyBuffer, filename);
+
+                         // send a standard http response header
+                         client.println("HTTP/1.1 200 OK");
+                         client.println("Content-Type: text/plain");
+                         client.println("Content-Disposition: attachment");
+                         //client.println("Content-Length:");
+                         client.println();
+
+                         fileDownload = 1;   //File download has started
+
+                         watchDog();
+                         
+                         readFile();
+                    }
+                    else
+                    {
+
+                         delay(1000);
+
+                         // everything else is a 404
+                         client.println("HTTP/1.1 404 Not Found");
+                         client.println("Content-Type: text/html");
+                         client.println();
+                         client.println("<h2>404</h2>\r\n");
+                         delay(250);
+                         client.println("<h2>File Not Found!</h2>\r\n");
+                         client.println("<br /><br />\r\n");
+                         client.println("\n<a href=http://10.0.0.9:8001/SdBrowse    >Return to SPIFFS files list</a><br />");
+                    }
+               }
+               else
+               {
+                    // Unsupported action, respond with an HTTP 405 method not allowed error.
+                    client.println("HTTP/1.1 405 Method Not Allowed");
+                    client.println("");
+               }
+
+               // Wait a short period to make sure the response had time to send before
+               // the connection is closed (the CC3000 sends data asyncronously).
+
+               delay(10);
+
+               Serial.begin(115200);
+
+               // Close the connection when done.
+               client.stop();
+               Serial.println("Client closed");
+               Serial.println("");
+
+               Serial.flush();
+               Serial.end();
+
+          }
+
+     }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Return true if the buffer contains an HTTP request.  Also returns the request
+// path and action strings if the request was parsed.  This does not attempt to
+// parse any HTTP headers because there really isn't enough memory to process
+// them all.
+// HTTP request looks like:
+//  [method] [path] [version] \r\n
+//  Header_key_1: Header_value_1 \r\n
+//  ...
+//  Header_key_n: Header_value_n \r\n
+//  \r\n
+bool parseRequest(uint8_t* buf, int bufSize, char* action, char* path)
+{
+     // Check if the request ends with \r\n to signal end of first line.
+     if (bufSize < 2)
+          return false;
+
+     if (buf[bufSize-2] == '\r' && buf[bufSize-1] == '\n')
+     {
+          parseFirstLine((char*)buf, action, path);
+          return true;
+     }
+     return false;
+}
+
+
+/////////////////////////////////////////////////////////
+// Parse the action and path from the first line of an HTTP request.
+void parseFirstLine(char* line, char* action, char* path)
+{
+     // Parse first word up to whitespace as action.
+     char* lineaction = strtok(line, " ");
+
+     if (lineaction != NULL)
+
+          strncpy(action, lineaction, MAX_ACTION);
+     // Parse second word up to whitespace as path.
+     char* linepath = strtok(NULL, " ");
+
+     if (linepath != NULL)
+
+          strncpy(path, linepath, MAX_PATH);
+}
+
+
+
+///////////////
+void readFile() 
+{
+
+      Serial.begin(115200);
+
+      String filename = (const char *)&MyBuffer;
+            
+      Serial.print("File:  ");
+      Serial.println(filename);  
+      
+      File webFile = SPIFFS.open(filename, "r"); 
+
+     if (!webFile) 
+     {
+        Serial.println("File failed to open");
+     }
+      else
+     {
+          const int bufSize = 1024; 
+          byte clientBuf[bufSize];
+          int clientCount = 0;
+
+          while (webFile.available())
+          {
+            
+            clientBuf[clientCount] = webFile.read();
+            clientCount++;
+          
+            if (clientCount > bufSize-1)
+            {          
+                client.write((const uint8_t *)clientBuf, bufSize);
+                clientCount = 0;
+            }
+          }
+          // final < bufSize byte cleanup packet
+          if (clientCount > 0)
+          {
+             client.write((const uint8_t *)clientBuf, clientCount);
+          }
+          
+          // close the file:
+          webFile.close();
+      }
+       
+      fileDownload = 0;  //File download has finished; allow logging since download has completed
+      
+      delay(500);
+      
+      MyBuffer[0] = '\0';
+      
+      Serial.end();
+
+      loop();
+}
+
+
+///////////////
+void watchDog()    //Keep "alive" for SwitchDoc Labs, "Dual WatchDog Timer"
+{
+
+     //Keeps interal wdt from resetting.
+
+     wdt_reset();
+
+     /* for troubleshooting
+     Serial.begin(115200);
+     Serial.println("\nWDT Pulsed");
+     Serial.end();
+     */
+
+}
+
+/////////////////////////////////
+void ReadDS3231()
+{
+
+     delay(1000);
+     
+     second=Clock.getSecond();
+     minute=Clock.getMinute();
+     hour=Clock.getHour(h12, PM);
+     date=Clock.getDate();
+     month=Clock.getMonth(Century);
+     year=Clock.getYear();
+
+     
+
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  DS1307 Date and Time Stamping  Orginal function by
+//  Bernhard    http://www.backyardaquaponics.com/forum/viewtopic.php?f=50&t=15687
+//  Modified by Tech500 to use RTCLib
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+String getDateTime()
+{
+
+     ReadDS3231();
+     int temp;
+
+     temp = (month);
+     if (temp < 10)
+     {
+          SMonth = ("0" + (String)temp);
+     }
+     else
+     {
+          SMonth = (String)temp; 
+     }
+
+     temp = (date);
+     if (temp < 10)
+     {
+          SDay = ("0" + (String)temp);
+     }
+     else
+     {
+          SDay = (String)temp;
+     }
+
+     SYear = (String)(year);
+
+     temp = (hour);
+     if (temp < 10)
+     {
+          SHour = ("0" + (String)temp);
+     }
+     else
+     {
+          SHour = (String)temp;
+     }
+
+     temp = (minute);
+     if (temp < 10)
+     {
+          SMin = ("0" + (String)temp);  
+     }
+     else
+     {
+          SMin = (String)temp;
+     }
+
+     temp = (second);
+     if (temp < 10)
+     {
+          SSec = ("0" + (String)temp);
+     }
+     else
+     {
+          SSec = (String)temp;
+     }
+
+     dtStamp = SMonth + '/' + SDay + '/' + SYear + " , " + SHour + ':' + SMin + ':' + SSec;
+
+     return(dtStamp);
+}
+
+/////////////////////
+void getWeatherData() 
+{
+  
+     bme_temp     = bme.readTemperature();        // No correction factor needed for this sensor
+     delay(1000);
+     bme_humidity = bme.readHumidity();     // Plus a correction factor for this sensor
+     delay(1000);
+     bme_pressure = bme.readPressure()/100; // Plus a correction factor for this sensor   // + 3.7 Correction factor
+     bme_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);   //Altitude in meters
+
+     T = (bme_temp * 9 / 5) + 32;           // Convert back to deg-F for the RH equation
+     RHx = bme_humidity;                    // Short form of RH for inclusion in the equation makes it easier to read
+     heat_index = ((-42.379 + (2.04901523 * T) + (10.14333127*RHx) - (0.22475541 *T * RHx) - (0.00683783 * sq(T)) - (0.05481717 * sq(RHx)) + (0.00122874 * sq(T) * RHx) + (0.00085282 * T * sq(RHx)) - (0.00000199 * sq(T) * sq(RHx)) - 32) * 5/9);
+     if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
+     dew_point = (243.04 * (log(bme_humidity/100) + ((17.625 * bme_temp)/(243.04+bme_temp))) / (17.625-log(bme_humidity/100) - ((17.625 * bme_temp) / (243.04+bme_temp))));
+
+     delay(100);
+
+}
+
+////////////////////////
+float updateDifference()  //Pressure difference for fifthteen minute interval
+{
+
+     //Function to find difference in Barometric Pressure
+     //First loop pass pastPressure and currentPressure are equal resulting in an incorrect difference result.  Output "...Processing"
+     //Future loop passes difference results are correct
+
+     difference = currentPressure - pastPressure;  //This will be pressure from this pass thru loop, pressure1 will be new pressure reading next loop pass
+     if (difference == currentPressure)
+     {
+          difference = 0;
+     }
+
+     return(difference);  //Barometric pressure change in inches of Mecury
+
+}
+
+////////////////////////////////
+void beep(unsigned char delayms)
+{
+
+     // wait for a delayms ms
+     digitalWrite(sonalertPin, HIGH);       // High turns on Sonalert tone
+     delay(3000);
+     digitalWrite(sonalertPin, LOW);  //Low turns of Sonalert tone
+
+}
+
+/////////////
+void newDay()   //Collect Data for twenty-four hours; then start a new day
+{
+
+     getDateTime();
+
+     //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
+     if (DoW == 7)
+     {
+          fileStore();
+     }
+
+     //id = 1;   //Reset id for start of new day
+     //Write log Header
+
+     // Open file for appended writing
+     File log = SPIFFS.open("LOG.TXT", "a");
+
+     if (!log)
+     {
+          Serial.println("file open failed");
+     }
+
+     {
+          Serial.begin(115200);
+
+          delay(1000);
+          log.println(", , , , , ,"); //Just a leading blank line, in case there was previous data
+          log.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, atm, Altitude");
+          log.close();
+          Serial.println("");
+          Serial.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, atm, Altitude");
+          Serial.flush();
+          Serial.end();
+     }
+}
+
+////////////////
+void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + day + ".txt") and create new, empty "log.txt"
+{
+
+     // create a file and write one line to the file
+
+     File log = SPIFFS.open("LOG.TXT", "a");
+
+     if (!log)
+     {
+          Serial.println("file open failed");
+     }
+
+     // rename the file log.txt
+     // sd.vwd() is the volume working directory, root.
+
+     ReadDS3231();
+
+     logName = "";
+     logName = "LOG";
+     logName += month;
+     logName += date; 
+     logName += ".TXT";
+
+     //For troubleshooting
+     //Serial.println(logName.c_str());
+
+     log.close();
+
+     // create a new "log.txt" file for appended writing
+     log = SPIFFS.open("LOG.TXT", "a");
+
+     if (!log)
+     {
+          Serial.println("file open failed");
+     }
+     log.println("");
+     log.close();
+
+     Serial.begin(115200);
+
+     Serial.println("");
+     Serial.println("New LOG.TXT created");
+
+     Serial.flush();
+     Serial.end();
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
