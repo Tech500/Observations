@@ -5,7 +5,7 @@
 //                       listFiles and readFile by martinayotte of ESP8266 Community               
 //                       
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/12/2017 11:30 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/14/2017 27:42 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 //
 //                       Project is open-Source    
@@ -36,10 +36,6 @@
 const char* ssid = "Security-22";
 const char* password = "1048acdc7388";
 
-//IPAddress ip(10,0,0,50);   // The address 192.168.0.53 is arbitary, if could be any address in the range of your router, but not another device!
-//IPAddress gateway(10,0,0,1);  // My router has this base address
-//IPAddress subnet(255,255,255,0); // Define the sub-network
-
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
 char temperatureFString[6];
@@ -53,7 +49,9 @@ int count = 0;
 
 Adafruit_BME280 bme; // Note Adafruit assumes I2C adress = 0x77 my module (eBay) uses 0x76 so the library address has been changed.
 
-#define SEALEVELPRESSURE_HPA (1014.5)   //1022.4
+unsigned long delayTime;
+
+#define SEALEVELPRESSURE_HPA (1030.0)   //1022.4
 
 //Real Time Clock used  DS3231
 DS3231 Clock;
@@ -126,8 +124,8 @@ char path[MAX_PATH+1];
 
 
 
-// Web Server on port 8001
-WiFiServer server(8001);
+// Web Server on port 8002
+WiFiServer server(8002);
 WiFiClient client;
 
 
@@ -139,9 +137,14 @@ void setup(void)
      watchDog();
 
      Serial.begin(115200);
-
+     
+     Serial.flush();
+     
      Wire.begin(D3, D4);
-     //Wire.setClock(100000);
+    
+     pinMode(D3, INPUT_PULLUP); //Set input (SDA) pull-up resistor on
+
+     Wire.setClock(2000000);    // Set I2C bus speed 
      
 /*
      Clock.setSecond(00);//Set the second 
@@ -460,17 +463,28 @@ void listen()   // Listen for client connection
 
                     getDateTime(); //get accessed date and time
 
-                    char ip1String[] = "10.0.0.146";   //Host ip address
-                    char ip2String[] = {client.remoteIP()};
+                    String ip1String = "10.0.0.146";   //Host ip address
+                    String ip2String = client.remoteIP().toString();   //client remote IP address
                     
                     // Open a "access.txt" for appended writing.   Client access ip address logged.
-                     File logFile = SPIFFS.open("/ACCESS.TXT", "a"); 
+                    File logFile = SPIFFS.open("/ACCESS.TXT", "a"); 
 
                     if (!logFile) 
                     {
                        Serial.println("File failed to open");  
                     }
-     
+                    
+                    if (ip1String == ip2String)
+                    {
+                      
+                        Serial.println("IP Address match");
+                        logFile.close();
+                        
+                    }
+                    else
+                    {
+                         Serial.println("IP address that do not match ->log client ip address");
+                   
                          logFile.print("Accessed:  ");
                          logFile.print(dtStamp + " -- ");
                          logFile.print("Client IP:  ");
@@ -480,7 +494,7 @@ void listen()   // Listen for client connection
                          logFile.print(path);
                          logFile.println("");
                          logFile.close();
-                   
+                    }                                      
                     // Check the action to see if it was a GET request.
                     if (strncmp(path, "/Weather", 8) == 0)   // Respond with the path that was accessed.
                     {
@@ -555,11 +569,11 @@ void listen()   // Listen for client connection
                          client.print(" Feet<br />");
                          client.println("<br /><br />");
                          client.println("<h2>Collected Observations</h2>");
-                         client.println("<a href=http://10.0.0.9:8001/LOG.TXT download>Current Week Observations</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://10.0.0.9:8001/SdBrowse >Weekly Data Files</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/SdBrowse >Weekly Data Files</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://10.0.0.9:8001/README.TXT download>Server:  README</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
                          client.print("<H2>Client IP:  <H2>");
                          client.print(client.remoteIP().toString().c_str());
@@ -585,6 +599,8 @@ void listen()   // Listen for client connection
                          client.println("<head><title>SDBrowse</title><head />");
                          // print all the files, use a helper to keep it clean
                          client.println("<h2>Server Files:</h2>");
+                         
+                         //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
                          String str = String("<html><head></head>\r\n");
                          
                          if (!SPIFFS.begin()) 
@@ -606,8 +622,10 @@ void listen()   // Listen for client connection
                          str += "</body></html>\r\n";
 
                          client.print(str); 
+                         
+                         ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8001/Weather    >Current Observations</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -636,7 +654,7 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://10.0.0.9:8001/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
                          else
                          {
@@ -689,7 +707,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8001/SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
@@ -706,6 +724,8 @@ void listen()   // Listen for client connection
 
                Serial.begin(115200);
 
+               //Client flush buffers
+               client.flush();
                // Close the connection when done.
                client.stop();
                Serial.println("Client closed");
@@ -864,6 +884,9 @@ String getDateTime()
 {
 
      ReadDS3231();
+     
+     delay(1000);
+     
      int temp;
 
      temp = (month);
@@ -928,12 +951,15 @@ void getWeatherData()
 {
   
      bme_temp     = bme.readTemperature();        // No correction factor needed for this sensor
-     delay(1000);
+     delayTime = 5000;
      bme_humidity = bme.readHumidity();     // Plus a correction factor for this sensor
-     delay(1000);
+     delayTime = 5000;
      bme_pressure = bme.readPressure()/100; // Plus a correction factor for this sensor   // + 3.7 Correction factor
+     delayTime = 5000;
      bme_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);   //Altitude in meters
 
+     delayTime = 5000;
+     
      T = (bme_temp * 9 / 5) + 32;           // Convert back to deg-F for the RH equation
      RHx = bme_humidity;                    // Short form of RH for inclusion in the equation makes it easier to read
      heat_index = ((-42.379 + (2.04901523 * T) + (10.14333127*RHx) - (0.22475541 *T * RHx) - (0.00683783 * sq(T)) - (0.05481717 * sq(RHx)) + (0.00122874 * sq(T) * RHx) + (0.00085282 * T * sq(RHx)) - (0.00000199 * sq(T) * sq(RHx)) - 32) * 5/9);
@@ -1058,7 +1084,6 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
      Serial.end();
 
 }
-
 
 
 
