@@ -8,7 +8,7 @@
 //                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/17/2017 17:25 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 //
-//                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
+//                       Project is Open-Source; uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
 //                       project cost less than $15.00  
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
