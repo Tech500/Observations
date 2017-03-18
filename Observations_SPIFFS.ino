@@ -1,14 +1,14 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//                NEW:   Supports WeMos D1 R2 Dev. Based Developement Board 
+//                       Supports WeMos D1 R2 Dev. Based Developement Board 
 //                        
-//                       listFiles and readFile by martinayotte of ESP8266 Community               
+//                       listFiles and readFile by martinayotte of "ESP8266 Community Forum"             
 //                       
 //                         
 //                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/18/2017 7:25 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 //
-//                       Project is open-Source    
+//                       Project is Open-Source    
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ********************************************************************************
@@ -807,31 +807,19 @@ void readFile()
      }
       else
      {
-          const int bufSize = 1024; 
-          byte clientBuf[bufSize];
-          int clientCount = 0;
-
-          while (webFile.available())
-          {
-            
-            clientBuf[clientCount] = webFile.read();
-            clientCount++;
-          
-            if (clientCount > bufSize-1)
-            {          
-                client.write((const uint8_t *)clientBuf, bufSize);
-                clientCount = 0;
-            }
-          }
-          // final < bufSize byte cleanup packet
-          if (clientCount > 0)
-          {
-             client.write((const uint8_t *)clientBuf, clientCount);
-          }
-          
-          // close the file:
-          webFile.close();
-      }
+        char buf[1024];
+        int siz = webFile.size();
+        //webserver.setContentLength(str.length() + siz);
+        //webserver.send(200, "text/plain", str);
+        while(siz > 0) 
+        {
+            size_t len = std::min((int)(sizeof(buf) - 1), siz);
+            webFile.read((uint8_t *)buf, len);
+            client.write((const char*)buf, len);
+            siz -= len;
+        }
+        webFile.close();
+     }
        
       fileDownload = 0;  //File download has finished; allow logging since download has completed
       
