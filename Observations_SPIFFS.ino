@@ -1,15 +1,14 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//                       Supports WeMos D1 R2 Revison 2.10,   --ESP8266EX Based Developement Board 
+//                NEW:   Supports WeMos D1 R2 Dev. Based Developement Board 
 //                        
-//                       listFiles and readFile by martinayotte of ESP8266 Community Forum             
+//                       listFiles and readFile by martinayotte of ESP8266 Community               
 //                       
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/17/2017 17:25 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/14/2017 17:42 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 //
-//                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
-//                       project cost less than $15.00  
+//                       Project is open-Source    
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ********************************************************************************
@@ -34,8 +33,8 @@
 #include "SPIFlash.h"
 
 // Replace with your network details
-const char* ssid = "Security-22";
-const char* password = "1048acdc7388";
+const char* ssid = "SSID";
+const char* password = "SSID-PASSWORD";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
@@ -212,55 +211,6 @@ void setup(void)
 
      Serial.flush();
      Serial.end();
-
-}
-
-////////////////////////////////////////////////////
-// Function by martinayotte of ESP8266 Community Forum
-////////////////////////////////////////////////////
-char listFiles()
-{
-
-     // send a standard http response header
-     client.println("HTTP/1.1 200 OK");
-     client.println("Content-Type: text/html");
-     client.println();
-     client.println("<!DOCTYPE HTML>");
-     client.println("<html>\r\n");
-     client.println("<body>\r\n");
-     client.println("<head><title>SDBrowse</title><head />");
-     client.println("<h2>Server Files:</h2>");
-     
-     //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
-     String str = String("<html><head></head>\r\n");
-     
-     if (!SPIFFS.begin()) 
-     {
-          Serial.println("SPIFFS failed to mount !\r\n");
-     }
-     Dir dir = SPIFFS.openDir("/");
-     while (dir.next()) 
-     {
-          str += "<a href=\"";
-          str += dir.fileName();
-          str += "\">";
-          str += dir.fileName();
-          str += "</a>";
-          str += "    ";
-          str += dir.fileSize();
-          str += "<br>\r\n";
-     }
-     str += "</body></html>\r\n";
-
-     client.print(str); 
-     
-     ////////////////// End code by martinayotte //////////////////////////////////////////////////////
-     client.println("<br /><br />\r\n");
-     client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
-     client.println("<br />\r\n");
-     client.println("<body />\r\n");
-     client.println("<br />\r\n");
-     client.println("</html>\r\n");
 
 }
 
@@ -499,12 +449,16 @@ void listen()   // Listen for client connection
 
                if(parsed)
                {
+
+                    String ip1String = "10.0.0.146";   //Host ip address
+                    String ip2String = client.remoteIP().toString();   //client remote IP address
+                    
                     Serial.begin(115200);
                     Serial.println();
                     getDateTime();
                     Serial.println("Client connected:  " + dtStamp);
                     Serial.print("Client IP:  ");
-                    Serial.println(client.remoteIP());
+                    Serial.println(ip2String);
                     Serial.println(F("Processing request"));
                     Serial.print(F("Action: "));
                     Serial.println(action);
@@ -513,8 +467,7 @@ void listen()   // Listen for client connection
 
                     getDateTime(); //get accessed date and time
 
-                    String ip1String = "10.0.0.146";   //Host ip address
-                    String ip2String = client.remoteIP().toString();   //client remote IP address
+                   
                     
                     // Open a "access.txt" for appended writing.   Client access ip address logged.
                     File logFile = SPIFFS.open("/ACCESS.TXT", "a"); 
@@ -639,8 +592,48 @@ void listen()   // Listen for client connection
                     {
                          fileDownload = 1;
 
-                         listFiles();
+                         // send a standard http response header
+                         client.println("HTTP/1.1 200 OK");
+                         client.println("Content-Type: text/html");
+                         client.println();
+                         client.println("<!DOCTYPE HTML>");
+                         client.println("<html>\r\n");
+                         client.println("<body>\r\n");
+                         client.println("<head><title>SDBrowse</title><head />");
+                         // print all the files, use a helper to keep it clean
+                         client.println("<h2>Server Files:</h2>");
                          
+                         //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
+                         String str = String("<html><head></head>\r\n");
+                         
+                         if (!SPIFFS.begin()) 
+                         {
+                              Serial.println("SPIFFS failed to mount !\r\n");
+                         }
+                         Dir dir = SPIFFS.openDir("/");
+                         while (dir.next()) 
+                         {
+                              str += "<a href=\"";
+                              str += dir.fileName();
+                              str += "\">";
+                              str += dir.fileName();
+                              str += "</a>";
+                              str += "    ";
+                              str += dir.fileSize();
+                              str += "<br>\r\n";
+                         }
+                         str += "</body></html>\r\n";
+
+                         client.print(str); 
+                         
+                         ////////////////// End code by martinayotte //////////////////////////////////////////////////////
+                         client.println("<br /><br />\r\n");
+                         client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
+                         client.println("<br />\r\n");
+                         client.println("<body />\r\n");
+                         client.println("<br />\r\n");
+                         client.println("</html>\r\n");
+
                          fileDownload = 0;
 
                     }
@@ -793,9 +786,9 @@ void parseFirstLine(char* line, char* action, char* path)
           strncpy(path, linepath, MAX_PATH);
 }
 
-////////////////////////////////////////////////////
-// Function by martinayotte of ESP8266 Community Forum
-////////////////////////////////////////////////////
+
+
+///////////////
 void readFile() 
 {
 
@@ -812,22 +805,33 @@ void readFile()
      {
         Serial.println("File failed to open");
      }
-     else 
+      else
      {
-        char buf[1024];
-        int siz = webFile.size();
-        //webserver.setContentLength(str.length() + siz);
-        //webserver.send(200, "text/plain", str);
-        while(siz > 0) 
-        {
-            size_t len = std::min((int)(sizeof(buf) - 1), siz);
-            webFile.read((uint8_t *)buf, len);
-            client.write((const char*)buf, len);
-            siz -= len;
-        }
-        webFile.close();
-     }  
-  
+          const int bufSize = 1024; 
+          byte clientBuf[bufSize];
+          int clientCount = 0;
+
+          while (webFile.available())
+          {
+            
+            clientBuf[clientCount] = webFile.read();
+            clientCount++;
+          
+            if (clientCount > bufSize-1)
+            {          
+                client.write((const uint8_t *)clientBuf, bufSize);
+                clientCount = 0;
+            }
+          }
+          // final < bufSize byte cleanup packet
+          if (clientCount > 0)
+          {
+             client.write((const uint8_t *)clientBuf, clientCount);
+          }
+          
+          // close the file:
+          webFile.close();
+      }
        
       fileDownload = 0;  //File download has finished; allow logging since download has completed
       
@@ -950,11 +954,11 @@ void getWeatherData()
 {
   
      bme_temp     = bme.readTemperature();        // No correction factor needed for this sensor
-     
+     delayTime = 5000;
      bme_humidity = bme.readHumidity();     // Plus a correction factor for this sensor
-     
+     delayTime = 5000;
      bme_pressure = bme.readPressure()/100; // Plus a correction factor for this sensor   // + 3.7 Correction factor
-     
+     delayTime = 5000;
      bme_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);   //Altitude in meters
 
      delayTime = 5000;
@@ -1083,15 +1087,4 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
      Serial.end();
 
 }
-
-
-
-
-
-
-
-
-
-
-
 
