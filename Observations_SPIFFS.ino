@@ -8,7 +8,7 @@
 //                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/17/2017 17:25 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 //
-//                       Project is Open-Source; uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
+//                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
 //                       project cost less than $15.00  
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -34,8 +34,8 @@
 #include "SPIFlash.h"
 
 // Replace with your network details
-const char* ssid = "SSID";
-const char* password = "SSID-PASSWORD";
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
@@ -212,6 +212,55 @@ void setup(void)
 
      Serial.flush();
      Serial.end();
+
+}
+
+////////////////////////////////////////////////////
+// Function by martinayotte of ESP8266 Community Forum
+////////////////////////////////////////////////////
+char listFiles()
+{
+
+     // send a standard http response header
+     client.println("HTTP/1.1 200 OK");
+     client.println("Content-Type: text/html");
+     client.println();
+     client.println("<!DOCTYPE HTML>");
+     client.println("<html>\r\n");
+     client.println("<body>\r\n");
+     client.println("<head><title>SDBrowse</title><head />");
+     client.println("<h2>Server Files:</h2>");
+     
+     //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
+     String str = String("<html><head></head>\r\n");
+     
+     if (!SPIFFS.begin()) 
+     {
+          Serial.println("SPIFFS failed to mount !\r\n");
+     }
+     Dir dir = SPIFFS.openDir("/");
+     while (dir.next()) 
+     {
+          str += "<a href=\"";
+          str += dir.fileName();
+          str += "\">";
+          str += dir.fileName();
+          str += "</a>";
+          str += "    ";
+          str += dir.fileSize();
+          str += "<br>\r\n";
+     }
+     str += "</body></html>\r\n";
+
+     client.print(str); 
+     
+     ////////////////// End code by martinayotte //////////////////////////////////////////////////////
+     client.println("<br /><br />\r\n");
+     client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
+     client.println("<br />\r\n");
+     client.println("<body />\r\n");
+     client.println("<br />\r\n");
+     client.println("</html>\r\n");
 
 }
 
@@ -745,57 +794,7 @@ void parseFirstLine(char* line, char* action, char* path)
 }
 
 ////////////////////////////////////////////////////
-Function by martinayotte of ESP8266 Community Forum
-////////////////////////////////////////////////////
-char listFiles()
-{
-
-          // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>\r\n");
-          client.println("<body>\r\n");
-          client.println("<head><title>SDBrowse</title><head />");
-          // print all the files, use a helper to keep it clean
-          client.println("<h2>Server Files:</h2>");
-          
-          //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
-          String str = String("<html><head></head>\r\n");
-          
-          if (!SPIFFS.begin()) 
-          {
-               Serial.println("SPIFFS failed to mount !\r\n");
-          }
-          Dir dir = SPIFFS.openDir("/");
-          while (dir.next()) 
-          {
-               str += "<a href=\"";
-               str += dir.fileName();
-               str += "\">";
-               str += dir.fileName();
-               str += "</a>";
-               str += "    ";
-               str += dir.fileSize();
-               str += "<br>\r\n";
-          }
-          str += "</body></html>\r\n";
-
-          client.print(str); 
-          
-          ////////////////// End code by martinayotte //////////////////////////////////////////////////////
-          client.println("<br /><br />\r\n");
-          client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
-          client.println("<br />\r\n");
-          client.println("<body />\r\n");
-          client.println("<br />\r\n");
-          client.println("</html>\r\n");
-
-}
-
-////////////////////////////////////////////////////
-Function by martinayotte of ESP8266 Community Forum
+// Function by martinayotte of ESP8266 Community Forum
 ////////////////////////////////////////////////////
 void readFile() 
 {
@@ -1084,4 +1083,15 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
      Serial.end();
 
 }
+
+
+
+
+
+
+
+
+
+
+
 
