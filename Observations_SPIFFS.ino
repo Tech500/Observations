@@ -37,8 +37,8 @@
 #include "SPIFlash.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
-const char* ssid = "Security-22";
-const char* password = "1048acdc7388";
+const char* ssid = "YourSSID";
+const char* password = "YourSSIDPassword";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
