@@ -1,9 +1,11 @@
 # Observations
 Internet Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
 
-March 25, 2017 Current Features "Oberservations_SPIFFS.
+March 25, 2017 Current Features "Oberservations_SPIFFS.ino".
 
-Requires WeMOS D1 R2 Developement Board, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature and sensor (BME280).
+
+
+Requires WeMOS D1 R2 Developement Board, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature sensor (BME280).
 
 Features:
 
