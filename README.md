@@ -1,5 +1,5 @@
 # Observations
-Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
+Internet Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
 
 March 25, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
 
