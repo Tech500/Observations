@@ -5,7 +5,7 @@ March 25, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
 
 Internet Weather Datalogger and Dynamic Web server
 
-Requires WeMOS D1 R2 Developement Board and Real time clock, DS3231, and Humidity/Temperature and Barometric Pressure sensor, BME280.
+Requires WeMOS D1 R2 Developement Board, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature and sensor (BME280).
 
 Features:
 
@@ -27,4 +27,4 @@ Features:
 
  9. Two-line LCD Display of Barometric Pressure, in both inches of Mercury and millibars.
 
-Server is a WeMOS D1 R2, Model 2.1.0 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 breakout board and DS3231 breakout board ~ $ 4.00; both are required for project. Sensor is located indoors, currently.
+Server is a WeMOS D1 R2, Model 2.1.0 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 breakout board and DS3231 breakout board ~ $ 6.00; both are required for project. Sensor is located indoors, currently.
