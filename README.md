@@ -1,7 +1,7 @@
 # Observations
-Data logger and dynamic web server utilizing SPIFFS.
+Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
 
-March 12, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
+March 25, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
 
 Internet Weather Datalogger and Dynamic Web server
 
@@ -21,12 +21,10 @@ Features:
 
  6. DIFFER.TXT stores the difference in Barometric Pressure for the last fifteen minutes. Only a difference of equal to or greater than .020 inches of Mercury are logged with difference, date and time.
 
- 7. SERVER.TXT is used to record RESETS; both "Manual" and "WatchDog." Wireless Re-connects from lost of wireless connectivity are also logged to SERVER.TXT..
+ 7. URL file names other than ones defined in the Sketch produce "404 Page not found."
 
- 8. URL file names other than ones defined in the Sketch produce "404 Page not found."
+ 8. Audible alert from Piezo electric buzzer when there is Barometric Pressure difference of .020 inches of Mercury. I am interested in sudden drop of Barometric Pressure in a 15 minute interval.  Serve weather more likely with a sudden drop. Difference of .020 inches of Mercury point is set for my observations to log and sound audible alert; not based on any known value to be associated  with serve weather.
 
- 9. Audible alert from Piezo electric buzzer when there is Barometric Pressure difference of .020 inches of Mercury. I am interested in sudden drop of Barometric Pressure in a 15 minute interval.  Serve weather more likely with a sudden drop. Difference of .020 inches of Mercury point is set for my observations to log and sound audible alert; not based on any known value to be associated  with serve weather.
+ 9. Two-line LCD Display of Barometric Pressure, in both inches of Mercury and millibars.
 
- 10.    Two-line LCD Display of Barometric Pressure, in both inches of Mercury and millibars.
-
-Server is a WeMOS D1 R2 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 ~ $ 4.00; both are required for project. Sensor is located indoors, currently.
+Server is a WeMOS D1 R2, Model 2.1.0 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 breakout board and DS3231 breakout board ~ $ 4.00; both are required for project. Sensor is located indoors, currently.
