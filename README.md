@@ -1,9 +1,7 @@
 # Observations
 Internet Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
 
-March 25, 2017 Current Features SdBrowse_CC3000_HTTPServer.ino.
-
-Internet Weather Datalogger and Dynamic Web server
+March 25, 2017 Current Features "Oberservations_SPIFFS.
 
 Requires WeMOS D1 R2 Developement Board, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature and sensor (BME280).
 
