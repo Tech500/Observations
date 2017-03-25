@@ -1,49 +1,46 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//                       Supports WeMos D1 R2 Dev. Based Developement Board 
+//                       Internet Weather Datalogger and Dynamic Web Server --ESP8266
+//
+//                       Supports WeMos D1 R2 Revison 2.1.0,   --ESP8266EX Based Developement Board 
+//
+//                       https://www.wemos.cc/product/d1.html      
 //                        
-//                       listFiles and readFile by martinayotte of "ESP8266 Community Forum"             
-//                       
+//                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/18/2017 7:25 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/24/2017 22:38 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
-//
-//                       Project is Open-Source    
-//
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+//                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
+//                       project cost less than $15.00  
+//                                                                                    Setup-one-Serial
+/////////////////////////////////////////////////////////////////////////////////////////////////////// 
 // ********************************************************************************
 // ********************************************************************************
 //
 //   See invidual library downloads for each library license.
 //
-//   Following code was developed using the Adafruit CC300 library, "HTTPServer" example.
+//   Following code was developed using the Adafruit CC300 library, "HTTPServer" example.   
 //   and by merging library examples, adding logic for Sketch flow.
 //
 // *********************************************************************************
 // *********************************************************************************
 
 
-#include <Wire.h>
-#include <DS3231.h>
-#include <ESP8266WiFi.h>
-#include <FS.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
-//#include <LiquidCrystal_I2C.h>
-#include "SPIFlash.h"
+#include <Wire.h>   //Part of the Arduino IDE software download
+#include <DS3231.h>   //http://misclab.umeoce.maine.edu/boss/Arduino/bensguides/DS3231_Arduino_Clock_Instructions.pdf
+#include <ESP8266WiFi.h>   //Part of ESP8266 Board Manager install
+#include <FS.h>   //Part of ESP8266-Arduino Core
+#include <Adafruit_Sensor.h>   https://github.com/adafruit/Adafruit_Sensor
+#include <Adafruit_BME280.h>   //https://github.com/adafruit/Adafruit_BME280_Library
+//#include <LiquidCrystal_I2C.h>   //https://github.com/esp8266/Basic/tree/master/libraries/LiquidCrystal
+#include "SPIFlash.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
-const char* ssid = "SSID";
-const char* password = "SSID-PASSWORD";
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
-
-char temperatureFString[6];
-char heat_indexString[6];
-char humidityString[6];
-char dew_pointString[6];
-char pressureString[7];
-char pressureInchString[6];
 
 int count = 0;
 
@@ -51,7 +48,7 @@ Adafruit_BME280 bme; // Note Adafruit assumes I2C adress = 0x77 my module (eBay)
 
 unsigned long delayTime;
 
-#define SEALEVELPRESSURE_HPA (1030.0)   //1022.4
+#define SEALEVELPRESSURE_HPA (1032.4)   //Current millbars at Sea Level National Weather Station
 
 //Real Time Clock used  DS3231
 DS3231 Clock;
@@ -61,7 +58,8 @@ bool h12;
 bool PM;
 
 
-int year, month, date, DoW, hour, minute, second;
+int year, month, date, hour, minute, second;
+byte DoW, dayofWeek;
 
 //use I2Cscanner to find LCD display address, in this case 3F   //https://github.com/todbot/arduino-i2c-scanner/
 //LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
@@ -134,29 +132,25 @@ WiFiClient client;
 void setup(void)
 {
 
-     watchDog();
+     wdt_reset();
 
-     Serial.begin(115200);
+     Serial.begin(115200);   //Removed for Wireless operation
      
-     Serial.flush();
-     
-     Wire.begin(D3, D4);
-    
      pinMode(D3, INPUT_PULLUP); //Set input (SDA) pull-up resistor on
-
-     Wire.setClock(2000000);    // Set I2C bus speed 
-     
+     Wire.setClock(2000000); 
+     Wire.begin(D3, D4);
+        
 /*
      Clock.setSecond(00);//Set the second 
-     Clock.setMinute(54);//Set the minute 
-     Clock.setHour(7);  //Set the hour 
-     Clock.setDoW(1);    //Set the day of the week
-     Clock.setDate(12);  //Set the date of the month
+     Clock.setMinute(36);//Set the minute 
+     Clock.setHour(0);  //Set the hour 
+     Clock.setDoW(4);    //Set the day of the week
+     Clock.setDate(23);  //Set the date of the month
      Clock.setMonth(3);  //Set the month of the year
      Clock.setYear(17);  //Set the year (Last two digits of the year)
 */
 
-     wdt_reset();
+     wdt_reset();  
 
 // Connecting to WiFi network
      Serial.println();
@@ -175,10 +169,12 @@ void setup(void)
      Serial.println("WiFi connected");
 
      wdt_reset();
+     
+     getDateTime();
 
-    
      // Starting the web server
      //server.begin();
+     Serial.println(dtStamp);
      Serial.println("Web server running. Waiting for the ESP IP...");
      delay(1000);
 
@@ -192,7 +188,7 @@ void setup(void)
 
      //SPIFFS.format();
 
-     //SPIFFS.remove("/ACCESS.TXT");
+     //SPIFFS.remove("/LOG.TXT");
      
      //pinMode(sonalertPin, OUTPUT);  //Used for Piezo buzzer
 
@@ -209,7 +205,6 @@ void setup(void)
 
      //lcdDisplay();      //   LCD 1602 Display function --used for inital display
 
-     Serial.flush();
      Serial.end();
 
 }
@@ -224,16 +219,16 @@ void loop()
 {
 
      
-     watchDog();  
+     wdt_reset();  
      
      fileDownload = 0;
-
+     
      getDateTime();
      
      //Collect  "LOG.TXT" Data for one day; do it early so day of week still equals 7
      if (((hour) == 23 )  &&
                ((minute) == 57) &&
-               ((second) == 00))
+               ((second) == 0))
      {
           newDay();
      }
@@ -258,8 +253,8 @@ void loop()
 
           //lcdDisplay();      //   LCD 1602 Display function --used for 15 minute update
 
-          pastPressure = (bme_pressure *  0.000295333727);   //convert to inches mercury
-
+          pastPressure = ((bme_pressure * 0.0295299830714) + .81);   //convert to inches mercury
+          
      }
      else
      {
@@ -272,7 +267,7 @@ void loop()
 void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
 {
 
-     Serial.begin(115200);
+     getWeatherData();
 
      if(fileDownload == 1)   //File download has started
      {
@@ -309,7 +304,7 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
           log.print(heat_index * 1.8 + 32);
           log.print(" F. ");
           log.print(" , ");
-          log.print(bme_pressure * 0.02953, 3 );   //Convert hPA to inches of Mecury
+          log.print(currentPressure, 3);   //Inches of Mecury
           log.print(" in. Hg. ");
           log.print(" , ");
 
@@ -321,18 +316,18 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
           }
           else
           {
-               log.print((difference),3);
+               log.print((difference),3); 
                log.print(" Difference ");
                log.print(", ");
           }
 
-          log.print(bme_pressure, 1);  //Convert hPA to millibars
+          log.print((bme_pressure + 27.47), 2);  //Convert hPA to millibars
           log.print(" millibars ");
           log.print(" , ");
-          log.print(bme_pressure * 0.00098692326671601, 2);   //Convert hPA to Atm (atmospheric pressure)  
+          log.print(bme_pressure * 0.00098692326671601, 3);   //Convert hPa to atm (atmospheric pressure)  
           log.print(" atm ");
           log.print(" , ");
-          log.print(bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084, 1);  //Convert meters to Feet           /////////////////////////////////////////
+          log.print(bme_altitude, 1);  //Convert meters to Feet          
           log.print(" Ft. ");
           log.println();
           //Increment Record ID number
@@ -359,6 +354,7 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
                Serial.print(difference, 3);
                Serial.print("  ,");
                Serial.print(dtStamp);
+               Serial.println("");
 
                diff.println("");
                diff.print("Difference greater than .020 inches of Mecury,  ");
@@ -372,8 +368,8 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
 
 
           }
-          Serial.flush();
-          Serial.end();
+          
+          
      }
      listen();
 }
@@ -388,13 +384,13 @@ void lcdDisplay()   //   LCD 1602 Display function
      lcd.noAutoscroll();
      lcd.setCursor(0, 0);
      // Print Barometric Pressure
-     lcd.print((bme280_pressure *  0.00029530),3);   //convert to inches mercury
+     lcd.print((bme280_pressure *  0.00029530),3);   //Convert hPa to inches mercury
      lcd.print(" in. Hg.");
      // set the cursor to column 0, line 1
      // (note: line 1 is the second row, since counting begins with 0):
      lcd.setCursor(0, 1);
      // print millibars
-     lcd.print(((Pressure) * .01),3);   //convert to millibars
+     lcd.print(((Pressure) * .01),3);   //Convert  hPa to millibars
      lcd.print(" mb.    ");
      lcd.print("");
 
@@ -408,8 +404,6 @@ void listen()   // Listen for client connection
      client = server.available();
 
      fileDownload = 0;   //No file being downloaded
-
-     Serial.begin(115200);
 
      while(client.available())
      {
@@ -453,7 +447,6 @@ void listen()   // Listen for client connection
                     String ip1String = "10.0.0.146";   //Host ip address
                     String ip2String = client.remoteIP().toString();   //client remote IP address
                     
-                    Serial.begin(115200);
                     Serial.println();
                     getDateTime();
                     Serial.println("Client connected:  " + dtStamp);
@@ -464,11 +457,9 @@ void listen()   // Listen for client connection
                     Serial.println(action);
                     Serial.print(F("Path: "));  
                     Serial.println(path);
-
-                    getDateTime(); //get accessed date and time
-
                    
-                    
+                    getDateTime(); //get accessed date and time
+                  
                     // Open a "access.txt" for appended writing.   Client access ip address logged.
                     File logFile = SPIFFS.open("/ACCESS.TXT", "a"); 
 
@@ -480,13 +471,13 @@ void listen()   // Listen for client connection
                     if (ip1String == ip2String)
                     {
                       
-                        Serial.println("IP Address match");
+                        //Serial.println("IP Address match");
                         logFile.close();
                         
                     }
                     else
                     {
-                         Serial.println("IP address that do not match ->log client ip address");
+                         //Serial.println("IP address that do not match ->log client ip address");
                    
                          logFile.print("Accessed:  ");
                          logFile.print(dtStamp + " -- ");
@@ -534,7 +525,7 @@ void listen()   // Listen for client connection
                               client.println(" EST <br />");
                          }
 
-                         client.println("Humidity:  ");
+                         client.println("Humidity:  "); 
                          client.print(bme_humidity, 1);
                          client.print(" %<br />");
                          client.println("Dew point:  ");
@@ -546,8 +537,8 @@ void listen()   // Listen for client connection
                          client.println("Heat Index:  ");
                          client.print(heat_index * 1.8 + 32, 1);
                          client.print(" F. <br />");
-                         client.println("Barometric Pressure:  ");
-                         client.print(bme_pressure * 0.02953, 3);
+                         client.println("Barometric Pressure:  "); 
+                         client.print(currentPressure), 3);   //Inches of Mercury 
                          client.print(" in. Hg.<br />");
 
                          if (pastPressure == currentPressure)
@@ -562,13 +553,13 @@ void listen()   // Listen for client connection
                          }
 
                          client.println("Barometric Pressure:  ");
-                         client.println(bme_pressure, 1);   //Convert hPA to millbars 
+                         client.println(((bme_pressure) + 27.47), 1);   //Convert hPA to millbars 
                          client.println(" mb.<br />");
                          client.println("Atmosphere:  ");
-                         client.print(bme_pressure * 0.00098692326671601, 2);   //Convert hPA to Atm (atmospheric pressure)
+                         client.print(bme_pressure * 0.00098692326671601, 2);   //Convert hPa to Atm (atmospheric pressure)
                          client.print(" atm <br />");
                          client.println("Altitude:  ");
-                         client.print(bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084, 1);  //Convert meters to Feet
+                         client.print(bme_altitude, 1);  //Convert meters to Feet      
                          client.print(" Feet<br />");
                          client.println("<br /><br />");
                          client.println("<h2>Collected Observations</h2>");
@@ -693,7 +684,7 @@ void listen()   // Listen for client connection
 
                          fileDownload = 1;   //File download has started
 
-                         watchDog();
+                         wdt_reset();
                          
                          readFile();
                     }
@@ -725,8 +716,6 @@ void listen()   // Listen for client connection
 
                delay(10);
 
-               Serial.begin(115200);
-
                //Client flush buffers
                client.flush();
                // Close the connection when done.
@@ -734,8 +723,7 @@ void listen()   // Listen for client connection
                Serial.println("Client closed");
                Serial.println("");
 
-               Serial.flush();
-               Serial.end();
+              
 
           }
 
@@ -792,8 +780,6 @@ void parseFirstLine(char* line, char* action, char* path)
 void readFile() 
 {
 
-      Serial.begin(115200);
-
       String filename = (const char *)&MyBuffer;
             
       Serial.print("File:  ");
@@ -827,26 +813,9 @@ void readFile()
       
       MyBuffer[0] = '\0';
       
-      Serial.end();
+    
 
       loop();
-}
-
-
-///////////////
-void watchDog()    //Keep "alive" for SwitchDoc Labs, "Dual WatchDog Timer"
-{
-
-     //Keeps interal wdt from resetting.
-
-     wdt_reset();
-
-     /* for troubleshooting
-     Serial.begin(115200);
-     Serial.println("\nWDT Pulsed");
-     Serial.end();
-     */
-
 }
 
 /////////////////////////////////
@@ -855,13 +824,13 @@ void ReadDS3231()
 
      delay(1000);
      
-     second=Clock.getSecond();
-     minute=Clock.getMinute();
-     hour=Clock.getHour(h12, PM);
-     date=Clock.getDate();
-     month=Clock.getMonth(Century);
-     year=Clock.getYear();
-
+     second = Clock.getSecond();
+     minute = Clock.getMinute();
+     hour = Clock.getHour(h12, PM);
+     date = Clock.getDate();
+     month = Clock.getMonth(Century);
+     year = Clock.getYear();
+     dayofWeek = Clock.getDoW();
      
 
 }
@@ -875,8 +844,6 @@ String getDateTime()
 {
 
      ReadDS3231();
-     
-     delay(1000);
      
      int temp;
 
@@ -942,14 +909,14 @@ void getWeatherData()
 {
   
      bme_temp     = bme.readTemperature();        // No correction factor needed for this sensor
-     delayTime = 5000;
+     
      bme_humidity = bme.readHumidity();     // Plus a correction factor for this sensor
-     delayTime = 5000;
-     bme_pressure = bme.readPressure()/100; // Plus a correction factor for this sensor   // + 3.7 Correction factor
-     delayTime = 5000;
-     bme_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);   //Altitude in meters
+     
+     bme_pressure = (bme.readPressure() / 100);   
+     
+     bme_altitude = ((bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084) -285.67);   //Altitude in feet
 
-     delayTime = 5000;
+     delayTime = 5000;  
      
      T = (bme_temp * 9 / 5) + 32;           // Convert back to deg-F for the RH equation
      RHx = bme_humidity;                    // Short form of RH for inclusion in the equation makes it easier to read
@@ -957,6 +924,8 @@ void getWeatherData()
      if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
      dew_point = (243.04 * (log(bme_humidity/100) + ((17.625 * bme_temp)/(243.04+bme_temp))) / (17.625-log(bme_humidity/100) - ((17.625 * bme_temp) / (243.04+bme_temp))));
 
+     currentPressure = ((bme_pressure * 0.0295299830714) + .81)
+     
      delay(100);
 
 }
@@ -994,8 +963,6 @@ void beep(unsigned char delayms)
 void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
-     getDateTime();
-
      //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
      if (DoW == 7)
      {
@@ -1014,16 +981,14 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
      }
 
      {
-          Serial.begin(115200);
-
           delay(1000);
           log.println(", , , , , ,"); //Just a leading blank line, in case there was previous data
           log.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, atm, Altitude");
           log.close();
           Serial.println("");
           Serial.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, atm, Altitude");
-          Serial.flush();
-          Serial.end();
+         
+          
      }
 }
 
@@ -1043,7 +1008,7 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
      // rename the file log.txt
      // sd.vwd() is the volume working directory, root.
 
-     ReadDS3231();
+     getDateTime();
 
      logName = "";
      logName = "LOG";
@@ -1066,13 +1031,11 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
      log.println("");
      log.close();
 
-     Serial.begin(115200);
-
      Serial.println("");
      Serial.println("New LOG.TXT created");
 
-     Serial.flush();
-     Serial.end();
+    
+   
 
 }
 
