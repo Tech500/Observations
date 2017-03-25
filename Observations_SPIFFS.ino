@@ -8,12 +8,17 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/25/2017 04:48 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/25/2017 07:45 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
 //                       project cost less than $15.00  
-//                                                                                    Setup-one-Serial
+//  
+//
+//                       Replace xx.xx.xx.xx in all http://xx.xx.xx.xx:8002/page occurences with your interal IP address.
+//                       If Port Forwarding, then replace xx.xx.xx.xx with Public IP address.
+//                       
+//                                                                                  
 /////////////////////////////////////////////////////////////////////////////////////////////////////// 
 // ********************************************************************************
 // ********************************************************************************
@@ -37,8 +42,8 @@
 #include "SPIFlash.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
-const char* ssid = "Security-22";
-const char* password = "1048acdc7388";
+const char* ssid = "YourSSID";
+const char* password = "YourSSIDPassword";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
@@ -563,11 +568,11 @@ void listen()   // Listen for client connection
                          client.print(" Feet<br />");
                          client.println("<br /><br />");
                          client.println("<h2>Collected Observations</h2>");
-                         client.println("<a href=http://69.245.183.113:8002/LOG.TXT download>Current Week Observations</a><br />");
+                         client.println("<a href=http://xx.xx.xx.xx:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://69.245.183.113:8002/SdBrowse >Weekly Data Files</a><br />");
+                         client.println("<a href=http://xx.xx.xx.xx:8002/SdBrowse >Weekly Data Files</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://69.245.183.113:8002/README.TXT download>Server:  README</a><br />");
+                         client.println("<a href=http://xx.xx.xx.xx:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
                          client.print("<H2>Client IP:  <H2>");
                          client.print(client.remoteIP().toString().c_str());
@@ -619,7 +624,7 @@ void listen()   // Listen for client connection
                          
                          ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
+                         client.println("\n<a href=http://xx.xx.xx.xx:8002/Weather    >Current Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -648,7 +653,7 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://xx.xx.xx.xx:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
                          else
                          {
@@ -701,7 +706,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://69.245.183.113:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://xx.xx.xx.xx:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
