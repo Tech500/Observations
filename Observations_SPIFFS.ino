@@ -8,7 +8,7 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/24/2017 22:38 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/25/2017 04:48 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
@@ -37,8 +37,8 @@
 #include "SPIFlash.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
-const char* ssid = "YourSSID";
-const char* password = "YourSSIDPassword";
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
@@ -205,7 +205,7 @@ void setup(void)
 
      //lcdDisplay();      //   LCD 1602 Display function --used for inital display
 
-     Serial.end();
+     //Serial.end();
 
 }
 
@@ -538,7 +538,7 @@ void listen()   // Listen for client connection
                          client.print(heat_index * 1.8 + 32, 1);
                          client.print(" F. <br />");
                          client.println("Barometric Pressure:  "); 
-                         client.print(currentPressure), 3);   //Inches of Mercury 
+                         client.print(currentPressure, 3);   //Inches of Mercury 
                          client.print(" in. Hg.<br />");
 
                          if (pastPressure == currentPressure)
@@ -924,7 +924,7 @@ void getWeatherData()
      if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
      dew_point = (243.04 * (log(bme_humidity/100) + ((17.625 * bme_temp)/(243.04+bme_temp))) / (17.625-log(bme_humidity/100) - ((17.625 * bme_temp) / (243.04+bme_temp))));
 
-     currentPressure = ((bme_pressure * 0.0295299830714) + .81)
+     currentPressure = ((bme_pressure * 0.0295299830714) + .81); 
      
      delay(100);
 
@@ -964,7 +964,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
      //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
-     if (DoW == 7)
+     if (DoW == 0)
      {
           fileStore();
      }
@@ -977,7 +977,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 
      if (!log)
      {
-          Serial.println("file open failed");
+          Serial.println("file open failed"); 
      }
 
      {
