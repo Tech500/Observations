@@ -8,17 +8,12 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/25/2017 07:45 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/27/2017 16:15 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
 //                       project cost less than $15.00  
-//  
-//
-//                       Replace xx.xx.xx.xx in all http://xx.xx.xx.xx:8002/page occurences with your interal IP address.
-//                       If Port Forwarding, then replace xx.xx.xx.xx with Public IP address.
-//                       
-//                                                                                  
+//                                                                                    
 /////////////////////////////////////////////////////////////////////////////////////////////////////// 
 // ********************************************************************************
 // ********************************************************************************
@@ -39,7 +34,7 @@
 #include <Adafruit_Sensor.h>   https://github.com/adafruit/Adafruit_Sensor
 #include <Adafruit_BME280.h>   //https://github.com/adafruit/Adafruit_BME280_Library
 //#include <LiquidCrystal_I2C.h>   //https://github.com/esp8266/Basic/tree/master/libraries/LiquidCrystal
-#include "SPIFlash.h"   //Part of Arduino Library Manager
+#include "SPI.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
 const char* ssid = "YourSSID";
@@ -68,8 +63,6 @@ byte DoW, dayofWeek;
 
 //use I2Cscanner to find LCD display address, in this case 3F   //https://github.com/todbot/arduino-i2c-scanner/
 //LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
-
-String logName;    //String object for constructing log file name from current date
 
 #define sonalertPin 9  // pin for Piezo buzzer
 
@@ -146,11 +139,11 @@ void setup(void)
      Wire.begin(D3, D4);
         
 /*
-     Clock.setSecond(00);//Set the second 
-     Clock.setMinute(36);//Set the minute 
-     Clock.setHour(0);  //Set the hour 
-     Clock.setDoW(4);    //Set the day of the week
-     Clock.setDate(23);  //Set the date of the month
+     Clock.setSecond(30);//Set the second 
+     Clock.setMinute(56);//Set the minute 
+     Clock.setHour(23);  //Set the hour 
+     Clock.setDoW(0);    //Set the day of the week
+     Clock.setDate(25);  //Set the date of the month
      Clock.setMonth(3);  //Set the month of the year
      Clock.setYear(17);  //Set the year (Last two digits of the year)
 */
@@ -258,7 +251,7 @@ void loop()
 
           //lcdDisplay();      //   LCD 1602 Display function --used for 15 minute update
 
-          pastPressure = ((bme_pressure * 0.0295299830714) + .81);   //convert to inches mercury
+          pastPressure = currentPressure;
           
      }
      else
@@ -504,7 +497,7 @@ void listen()   // Listen for client connection
                          delay(200);
 
                          fileDownload = 1;
-
+                         
                          // First send the success response code.
                          client.println("HTTP/1.1 200 OK");
                          client.println("Content-Type: html");
@@ -540,7 +533,7 @@ void listen()   // Listen for client connection
                          client.print(bme_temp * 1.8 + 32, 1);
                          client.print(" F.<br />");
                          client.println("Heat Index:  ");
-                         client.print(heat_index * 1.8 + 32, 1);
+                         client.print(heat_index * 1.8 + 32, 1); 
                          client.print(" F. <br />");
                          client.println("Barometric Pressure:  "); 
                          client.print(currentPressure, 3);   //Inches of Mercury 
@@ -566,13 +559,14 @@ void listen()   // Listen for client connection
                          client.println("Altitude:  ");
                          client.print(bme_altitude, 1);  //Convert meters to Feet      
                          client.print(" Feet<br />");
-                         client.println("<br /><br />");
-                         client.println("<h2>Collected Observations</h2>");
-                         client.println("<a href=http://xx.xx.xx.xx:8002/LOG.TXT download>Current Week Observations</a><br />");
+                         //client.println("<br />");
+                          client.println("<h3>" + dtStamp + "  EST </h3>\r\n");                         
+                          client.println("<h2>Collected Observations</h2>");
+                         client.println("<a href=http://10.0.0.9:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://xx.xx.xx.xx:8002/SdBrowse >Weekly Data Files</a><br />");
+                         client.println("<a href=http://10.0.0.9:8002/SdBrowse >SPIFFS Files</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://xx.xx.xx.xx:8002/README.TXT download>Server:  README</a><br />");
+                         client.println("<a href=http://10.0.0.9:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
                          client.print("<H2>Client IP:  <H2>");
                          client.print(client.remoteIP().toString().c_str());
@@ -624,7 +618,7 @@ void listen()   // Listen for client connection
                          
                          ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://xx.xx.xx.xx:8002/Weather    >Current Observations</a><br />");
+                         client.println("\n<a href=http://10.0.0.9:8002/Weather    >Current Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -653,7 +647,7 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xx.xx.xx.xx:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
                          else
                          {
@@ -706,7 +700,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://xx.xx.xx.xx:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://10.0.0.9:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
@@ -923,13 +917,13 @@ void getWeatherData()
 
      delayTime = 5000;  
      
-     T = (bme_temp * 9 / 5) + 32;           // Convert back to deg-F for the RH equation
-     RHx = bme_humidity;                    // Short form of RH for inclusion in the equation makes it easier to read
+     T = (bme_temp * 9 / 5) + 32;   // Convert back to deg-F for the RH equation
+     RHx = bme_humidity;   // Short form of RH for inclusion in the equation makes it easier to read
      heat_index = ((-42.379 + (2.04901523 * T) + (10.14333127*RHx) - (0.22475541 *T * RHx) - (0.00683783 * sq(T)) - (0.05481717 * sq(RHx)) + (0.00122874 * sq(T) * RHx) + (0.00085282 * T * sq(RHx)) - (0.00000199 * sq(T) * sq(RHx)) - 32) * 5/9);
      if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
      dew_point = (243.04 * (log(bme_humidity/100) + ((17.625 * bme_temp)/(243.04+bme_temp))) / (17.625-log(bme_humidity/100) - ((17.625 * bme_temp) / (243.04+bme_temp))));
 
-     currentPressure = ((bme_pressure * 0.0295299830714) + .81); 
+     currentPressure = ((bme_pressure * 0.0295299830714) + .81);   //Convert hPa to in. HG add correction factor 
      
      delay(100);
 
@@ -940,7 +934,7 @@ float updateDifference()  //Pressure difference for fifthteen minute interval
 {
 
      //Function to find difference in Barometric Pressure
-     //First loop pass pastPressure and currentPressure are equal resulting in an incorrect difference result.  Output "...Processing"
+     //First loop pass pastPressure and currentPressure are equal resulting in an incorrect difference result. 
      //Future loop passes difference results are correct
 
      difference = currentPressure - pastPressure;  //This will be pressure from this pass thru loop, pressure1 will be new pressure reading next loop pass
@@ -949,7 +943,7 @@ float updateDifference()  //Pressure difference for fifthteen minute interval
           difference = 0;
      }
 
-     return(difference);  //Barometric pressure change in inches of Mecury
+     return(difference, 3);  //Barometric pressure change in inches of Mecury
 
 }
 
@@ -978,7 +972,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
      //Write log Header
 
      // Open file for appended writing
-     File log = SPIFFS.open("LOG.TXT", "a");
+     File log = SPIFFS.open("LOG.TXT", "a"); 
 
      if (!log)
      {
@@ -1001,46 +995,18 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + day + ".txt") and create new, empty "log.txt"
 {
 
-     // create a file and write one line to the file
-
-     File log = SPIFFS.open("LOG.TXT", "a");
-
-     if (!log)
-     {
-          Serial.println("file open failed");
-     }
-
-     // rename the file log.txt
-     // sd.vwd() is the volume working directory, root.
-
      getDateTime();
-
-     logName = "";
-     logName = "LOG";
-     logName += month;
-     logName += date; 
-     logName += ".TXT";
-
+     
+     
+     // rename the file "LOG.TXT"
+     String logname;
+     logname = "/LOG";
+     logname += Clock.getMonth(Century);
+     logname += Clock.getDate();
+     logname += ".TXT";
+     SPIFFS.rename("/LOG.TXT", logname.c_str());
+     
      //For troubleshooting
-     //Serial.println(logName.c_str());
-
-     log.close();
-
-     // create a new "log.txt" file for appended writing
-     log = SPIFFS.open("LOG.TXT", "a");
-
-     if (!log)
-     {
-          Serial.println("file open failed");
-     }
-     log.println("");
-     log.close();
-
-     Serial.println("");
-     Serial.println("New LOG.TXT created");
-
-    
-   
-
+     Serial.println(logname.c_str());
+     
 }
-
