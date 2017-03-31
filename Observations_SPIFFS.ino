@@ -8,7 +8,7 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/27/2017 16:15 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/31/2017 16:04 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
@@ -186,7 +186,7 @@ void setup(void)
 
      //SPIFFS.format();
 
-     //SPIFFS.remove("/LOG.TXT");
+     //SPIFFS.remove("/LOG327.TXT");
      
      //pinMode(sonalertPin, OUTPUT);  //Used for Piezo buzzer
 
@@ -243,6 +243,8 @@ void loop()
 
           lastUpdate = dtStamp;   //store dtstamp for use on dynamic web page
 
+          getWeatherData();
+          
           updateDifference();  //Get Barometric Pressure difference
 
           logtoSD();   //Output to SD Card  --Log to SD on 15 minute interval.
@@ -251,7 +253,7 @@ void loop()
 
           //lcdDisplay();      //   LCD 1602 Display function --used for 15 minute update
 
-          pastPressure = currentPressure;
+          
           
      }
      else
@@ -265,7 +267,7 @@ void loop()
 void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
 {
 
-     getWeatherData();
+     //getWeatherData();
 
      if(fileDownload == 1)   //File download has started
      {
@@ -335,6 +337,8 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
 
           log.close();
 
+          pastPressure = currentPressure;
+          
           fileDownload = 0;
 
           if(abs(difference) >= .020)  //After testing and observations of Data; raised from .010 to .020 inches of Mecury
@@ -456,9 +460,7 @@ void listen()   // Listen for client connection
                     Serial.print(F("Path: "));  
                     Serial.println(path);
                    
-                    getDateTime(); //get accessed date and time
-                  
-                    // Open a "access.txt" for appended writing.   Client access ip address logged.
+                    //Open a "access.txt" for appended writing.   Client access ip address logged.
                     File logFile = SPIFFS.open("/ACCESS.TXT", "a"); 
 
                     if (!logFile) 
@@ -542,12 +544,12 @@ void listen()   // Listen for client connection
                          if (pastPressure == currentPressure)
                          {
                               client.println(difference, 3);
-                              client.print(" Difference in. Hg <br />");
+                              client.print(" in. Hg --Difference since last update <br />");
                          }
                          else
                          {
                               client.println(difference, 3);
-                              client.print(" Difference in. Hg <br />");
+                              client.print(" in. Hg --Difference since last update <br />");
                          }
 
                          client.println("Barometric Pressure:  ");
@@ -963,7 +965,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
      //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
-     if (DoW == 0)
+     if (dayofWeek == 0)
      {
           fileStore();
      }
@@ -995,18 +997,19 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + day + ".txt") and create new, empty "log.txt"
 {
 
-     getDateTime();
+     if (dayofWeek == 0)
+     {
      
-     
-     // rename the file "LOG.TXT"
-     String logname;
-     logname = "/LOG";
-     logname += Clock.getMonth(Century);
-     logname += Clock.getDate();
-     logname += ".TXT";
-     SPIFFS.rename("/LOG.TXT", logname.c_str());
-     
-     //For troubleshooting
-     Serial.println(logname.c_str());
-     
+          // rename the file "LOG.TXT"
+          String logname;
+          logname = "/LOG";
+          logname += Clock.getMonth(Century);
+          logname += Clock.getDate();
+          logname += ".TXT";
+          SPIFFS.rename("/LOG.TXT", logname.c_str());
+          
+          //For troubleshooting
+          Serial.println(logname.c_str());
+     }
 }
+
