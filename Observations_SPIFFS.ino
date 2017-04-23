@@ -8,7 +8,7 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --03/31/2017 16:04 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --04/091/2017 17:00 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
@@ -593,7 +593,7 @@ void listen()   // Listen for client connection
                          client.println("<body>\r\n");
                          client.println("<head><title>SDBrowse</title><head />");
                          // print all the files, use a helper to keep it clean
-                         client.println("<h2>Server Files:</h2>");
+                         client.println("<h2>SPIFFS Files:</h2>");
                          
                          //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
                          String str = String("<html><head></head>\r\n");
@@ -668,7 +668,7 @@ void listen()   // Listen for client connection
 
                     }
                     // Check the action to see if it was a GET request.
-                    else  if(strncmp(path, "/Grey", 8) == 0)
+                    else  if(strncmp(path, "/Grey73", 8) == 0)
                     {
                          //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                          //404 File not Found!
@@ -965,7 +965,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
      //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
-     if (dayofWeek == 0)
+     if (dayofWeek == 1)
      {
           fileStore();
      }
@@ -997,9 +997,6 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + day + ".txt") and create new, empty "log.txt"
 {
 
-     if (dayofWeek == 0)
-     {
-     
           // rename the file "LOG.TXT"
           String logname;
           logname = "/LOG";
@@ -1009,7 +1006,7 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
           SPIFFS.rename("/LOG.TXT", logname.c_str());
           
           //For troubleshooting
-          Serial.println(logname.c_str());
-     }
+          //Serial.println(logname.c_str());
+    
 }
 
