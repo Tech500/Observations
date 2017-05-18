@@ -965,7 +965,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
      //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
-     if (dayofWeek == 1)
+     if (dayofWeek == 0)
      {
           fileStore();
      }
