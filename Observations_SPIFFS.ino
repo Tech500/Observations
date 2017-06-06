@@ -8,7 +8,7 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --04/091/2017 17:00 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --05/152017 22:23 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
@@ -37,8 +37,8 @@
 #include "SPI.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
-const char* ssid = "YourSSID";
-const char* password = "YourSSIDPassword";
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
@@ -140,11 +140,11 @@ void setup(void)
         
 /*
      Clock.setSecond(30);//Set the second 
-     Clock.setMinute(56);//Set the minute 
-     Clock.setHour(23);  //Set the hour 
-     Clock.setDoW(0);    //Set the day of the week
-     Clock.setDate(25);  //Set the date of the month
-     Clock.setMonth(3);  //Set the month of the year
+     Clock.setMinute(44);//Set the minute 
+     Clock.setHour(13);  //Set the hour 
+     Clock.setDoW(6);    //Set the day of the week
+     Clock.setDate(4);  //Set the date of the month
+     Clock.setMonth(5);  //Set the month of the year
      Clock.setYear(17);  //Set the year (Last two digits of the year)
 */
 
@@ -186,7 +186,7 @@ void setup(void)
 
      //SPIFFS.format();
 
-     //SPIFFS.remove("/LOG327.TXT");
+     SPIFFS.remove("/ACCESS.TXT");
      
      //pinMode(sonalertPin, OUTPUT);  //Used for Piezo buzzer
 
@@ -214,7 +214,7 @@ void setup(void)
 
 ///////////
 void loop()
-{
+{ 
 
      
      wdt_reset();  
@@ -222,8 +222,11 @@ void loop()
      fileDownload = 0;
      
      getDateTime();
+   
+     //Serial.println(dayofWeek);  //Check to see which dayofWeek starts is Saturday.  Saturday is 6 dayofWeek on DS3231.
+   
      
-     //Collect  "LOG.TXT" Data for one day; do it early so day of week still equals 7
+     //Collect  "LOG.TXT" Data for one day; do it early (before 00:00:00) so day of week still equals 6.
      if (((hour) == 23 )  &&
                ((minute) == 57) &&
                ((second) == 0))
@@ -564,11 +567,11 @@ void listen()   // Listen for client connection
                          //client.println("<br />");
                           client.println("<h3>" + dtStamp + "  EST </h3>\r\n");                         
                           client.println("<h2>Collected Observations</h2>");
-                         client.println("<a href=http://10.0.0.9:8002/LOG.TXT download>Current Week Observations</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://10.0.0.9:8002/SdBrowse >SPIFFS Files</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/SdBrowse >SPIFFS Files</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://10.0.0.9:8002/README.TXT download>Server:  README</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
                          client.print("<H2>Client IP:  <H2>");
                          client.print(client.remoteIP().toString().c_str());
@@ -620,7 +623,7 @@ void listen()   // Listen for client connection
                          
                          ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8002/Weather    >Current Observations</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -649,7 +652,7 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
                          else
                          {
@@ -668,7 +671,7 @@ void listen()   // Listen for client connection
 
                     }
                     // Check the action to see if it was a GET request.
-                    else  if(strncmp(path, "/Grey73", 8) == 0)
+                    else  if(strncmp(path, "/Grey66", 8) == 0)
                     {
                          //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                          //404 File not Found!
@@ -702,7 +705,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
@@ -964,8 +967,8 @@ void beep(unsigned char delayms)
 void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
-     //Do file maintence on 7th day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
-     if (dayofWeek == 0)
+     //Do file maintence on 1st day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
+     if (dayofWeek == 6)
      {
           fileStore();
      }
@@ -980,7 +983,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
      {
           Serial.println("file open failed"); 
      }
-
+   else 
      {
           delay(1000);
           log.println(", , , , , ,"); //Just a leading blank line, in case there was previous data
@@ -988,9 +991,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
           log.close();
           Serial.println("");
           Serial.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, atm, Altitude");
-         
-          
-     }
+    }
 }
 
 ////////////////
@@ -1004,9 +1005,10 @@ void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + da
           logname += Clock.getDate();
           logname += ".TXT";
           SPIFFS.rename("/LOG.TXT", logname.c_str());
-          
+      
           //For troubleshooting
           //Serial.println(logname.c_str());
     
 }
+
 
