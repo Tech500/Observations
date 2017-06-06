@@ -8,7 +8,7 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --05/15/2017 22:23 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 --05/152017 22:23 EST
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
@@ -37,8 +37,8 @@
 #include "SPI.h"   //Part of Arduino Library Manager
 
 // Replace with your network details
-const char* ssid = "Security-22";
-const char* password = "1048acdc7388";
+const char* ssid = "YourSSID";
+const char* password = "YourPassword";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
 
@@ -671,7 +671,7 @@ void listen()   // Listen for client connection
 
                     }
                     // Check the action to see if it was a GET request.
-                    else  if(strncmp(path, "/Grey66", 8) == 0)
+                    else  if(strncmp(path, "/noname", 8) == 0)
                     {
                          //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                          //404 File not Found!
