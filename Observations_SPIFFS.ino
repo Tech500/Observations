@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                       Internet Weather Datalogger and Dynamic Web Server --ESP8266
+//                       Added sending FAVICON.ICO   06/15/2017  @ 200  --ab9nq.william--at-gmail.com
 //
 //                       Supports WeMos D1 R2 Revison 2.1.0,   --ESP8266EX Based Developement Board 
 //
@@ -8,7 +9,7 @@
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 --05/152017 22:23 EST
+//                       Renamed:  Observations_SPIFFS.ino  by tech500 
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
@@ -491,7 +492,25 @@ void listen()   // Listen for client connection
                          logFile.print(path);
                          logFile.println("");
                          logFile.close();
-                    }                                      
+                    } 
+					// Check the action to see if it was a GET request.
+                    if (strncmp(path, "/favicon.ico", 12) == 0)   // Respond with the path that was accessed.
+					{
+						char *filename = "/FAVICON.ICO";
+                        strcpy(MyBuffer, filename);
+						
+						// send a standard http response header
+                        client.println("HTTP/1.1 200 OK");
+                        client.println("Content-Type: image/x-icon");
+                        client.println();
+
+                        fileDownload = 1;   //File download has started
+
+                        wdt_reset();
+                         
+                        readFile();
+						
+					}
                     // Check the action to see if it was a GET request.
                     if (strncmp(path, "/Weather", 8) == 0)   // Respond with the path that was accessed.
                     {
@@ -705,7 +724,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://69.245.183.113:8002//SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
