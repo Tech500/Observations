@@ -1,21 +1,27 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                       Internet Weather Datalogger and Dynamic Web Server --ESP8266
-//                       Added sending FAVICON.ICO   06/15/2017  @ 200  --ab9nq.william--at-gmail.com
+//                       Added sending of FAVICON.ICO   06/15/2017  @ 15:58 EST --ab9nq.william--at-gmail.com
+//   
 //
 //                       Supports WeMos D1 R2 Revison 2.1.0,   --ESP8266EX Based Developement Board 
 //
-//                       https://www.wemos.cc/product/d1.html      
+//                       https://www.wemos.cc/product/d1.html       
 //                        
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
-//                       Renamed:  Observations_SPIFFS.ino  by tech500 
+//                       Observations_SPIFFS.ino  by tech500 
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
 // 
 //                       Project is Open-Source uses one RTC, DS3231 and one Barometric Pressure sensor, BME280; 
 //                       project cost less than $15.00  
 //                                                                                    
 /////////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Some lines require editing with your data.  Such as YourSSID, YourPassword, Your ThinkSpeak ChannelNumber, Your Thinkspeak API Key, Public IP, Forwarded Port,
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // ********************************************************************************
 // ********************************************************************************
 //
@@ -32,16 +38,19 @@
 #include <DS3231.h>   //http://misclab.umeoce.maine.edu/boss/Arduino/bensguides/DS3231_Arduino_Clock_Instructions.pdf
 #include <ESP8266WiFi.h>   //Part of ESP8266 Board Manager install
 #include <FS.h>   //Part of ESP8266-Arduino Core
-#include <Adafruit_Sensor.h>   https://github.com/adafruit/Adafruit_Sensor
+#include <Adafruit_Sensor.h>   //https://github.com/adafruit/Adafruit_Sensor
 #include <Adafruit_BME280.h>   //https://github.com/adafruit/Adafruit_BME280_Library
 //#include <LiquidCrystal_I2C.h>   //https://github.com/esp8266/Basic/tree/master/libraries/LiquidCrystal
 #include "SPI.h"   //Part of Arduino Library Manager
+#include <ThingSpeak.h>   //https://github.com/mathworks/thingspeak-arduino
 
+////////////////////////////////////
 // Replace with your network details
-const char* ssid = "YourSSID";
+///////////////////////////////////
+const char* ssid = "YourSSID;
 const char* password = "YourPassword";
 
-float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dew_point, bme_altitude;
+float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dp, dew_point, bme_altitude;
 
 int count = 0;
 
@@ -96,7 +105,7 @@ int fileDownload;   //File download status; 1 = file download has started, 0 = f
 
 char MyBuffer[13];
 
-#define LISTEN_PORT           8001    // What TCP port to listen on for connections.  
+//#define LISTEN_PORT           8002    // What TCP port to listen on for connections.  
 // The HTTP protocol uses port 80 by default.
 
 #define MAX_ACTION            10      // Maximum length of the HTTP action that can be parsed.
@@ -114,17 +123,33 @@ char MyBuffer[13];
 // an incoming request to finish.  Don't set this
 // too high or your server could be slow to respond.
 
-uint8_t buffer[BUFFER_SIZE+1];
+uint8_t buffer[BUFFER_SIZE+1];  
 int bufindex = 0;
 char action[MAX_ACTION+1];
 char path[MAX_PATH+1];
 
 
-
+//////////////////////////
 // Web Server on port 8002
+/////////////////////////
 WiFiServer server(8002);
 WiFiClient client;
 
+/*
+  ////////////////////////////////////////////////////////////////////////
+  //   xxxxxx being your ThinkSpeak ChannelNumber.  yyyyyyyyyyy being your ThinkSpeak API Key. 
+  This is the ThingSpeak channel number for the MathwWorks weather station
+  https://thingspeak.com/channels/xxxxxx.  It senses a number of things and puts them in the eight
+  field of the channel:
+  
+  Field 1 - Temperature (Degrees F)
+  Field 2 - Humidity (%RH)
+  Field 3 - Barometric Pressure (in Hg)
+  Field 4 - Dew Point  (Degree F)
+*/
+
+unsigned long myChannelNumber = xxxxxx;
+const char * myWriteAPIKey = "yyyyyyyyyyyyyy";
 
      
 ////////////////
@@ -141,11 +166,11 @@ void setup(void)
         
 /*
      Clock.setSecond(30);//Set the second 
-     Clock.setMinute(44);//Set the minute 
-     Clock.setHour(13);  //Set the hour 
+     Clock.setMinute(23);//Set the minute 
+     Clock.setHour(0);  //Set the hour 
      Clock.setDoW(6);    //Set the day of the week
-     Clock.setDate(4);  //Set the date of the month
-     Clock.setMonth(5);  //Set the month of the year
+     Clock.setDate(17);  //Set the date of the month
+     Clock.setMonth(6);  //Set the month of the year
      Clock.setYear(17);  //Set the year (Last two digits of the year)
 */
 
@@ -187,7 +212,7 @@ void setup(void)
 
      //SPIFFS.format();
 
-     SPIFFS.remove("/ACCESS.TXT");
+     //SPIFFS.remove("/LOG327.TXT");
      
      //pinMode(sonalertPin, OUTPUT);  //Used for Piezo buzzer
 
@@ -205,6 +230,8 @@ void setup(void)
      //lcdDisplay();      //   LCD 1602 Display function --used for inital display
 
      //Serial.end();
+   
+     ThingSpeak.begin(client); 
 
 }
 
@@ -219,8 +246,6 @@ void loop()
 
      
      wdt_reset();  
-     
-     fileDownload = 0;
      
      getDateTime();
    
@@ -254,6 +279,8 @@ void loop()
           logtoSD();   //Output to SD Card  --Log to SD on 15 minute interval.
 
           delay(10);  //Be sure there is enough SD write time
+      
+          speak();
 
           //lcdDisplay();      //   LCD 1602 Display function --used for 15 minute update
 
@@ -472,7 +499,7 @@ void listen()   // Listen for client connection
                        Serial.println("File failed to open");  
                     }
                     
-                    if (ip1String == ip2String)
+                    if ((ip1String == ip2String) || (ip2String == "0.0.0.0"))
                     {
                       
                         //Serial.println("IP Address match");
@@ -494,24 +521,24 @@ void listen()   // Listen for client connection
                          logFile.close();
                     } 
 					// Check the action to see if it was a GET request.
-                    if (strncmp(path, "/favicon.ico", 12) == 0)   // Respond with the path that was accessed.
+					if (strncmp(path, "/favicon.ico", 12) == 0)   // Respond with the path that was accessed.
 					{
 						char *filename = "/FAVICON.ICO";
-                        strcpy(MyBuffer, filename);
-						
+						strcpy(MyBuffer, filename);
+			
 						// send a standard http response header
-                        client.println("HTTP/1.1 200 OK");
-                        client.println("Content-Type: image/x-icon");
-                        client.println();
+						client.println("HTTP/1.1 200 OK");
+						client.println("Content-Type: image/x-icon");
+						client.println();
 
-                        fileDownload = 1;   //File download has started
+						fileDownload = 1;   //File download has started
 
-                        wdt_reset();
-                         
-                        readFile();
+						wdt_reset();
+						 
+						readFile();
 						
 					}
-                    // Check the action to see if it was a GET request.
+					// Check the action to see if it was a GET request.
                     if (strncmp(path, "/Weather", 8) == 0)   // Respond with the path that was accessed.
                     {
 
@@ -561,7 +588,7 @@ void listen()   // Listen for client connection
                          client.print(" F. <br />");
                          client.println("Barometric Pressure:  "); 
                          client.print(currentPressure, 3);   //Inches of Mercury 
-                         client.print(" in. Hg.<br />");
+                         client.print(" in. Hg.<br />"); 
 
                          if (pastPressure == currentPressure)
                          {
@@ -584,15 +611,20 @@ void listen()   // Listen for client connection
                          client.print(bme_altitude, 1);  //Convert meters to Feet      
                          client.print(" Feet<br />");
                          //client.println("<br />");
-                          client.println("<h3>" + dtStamp + "  EST </h3>\r\n");                         
-                          client.println("<h2>Collected Observations</h2>");
-                         client.println("<a href=http://69.245.183.113:8002/LOG.TXT download>Current Week Observations</a><br />");
+                         client.println("<h2>Weather Observations</h2>");
+						 client.println("<h3>" + dtStamp + "  EST </h3>\r\n"); 
+						 ////////////////////////////////////////////////////////////////////////////
+						 //  Here is where your public IP could be used; along with a forwarded port.
+						 ////////////////////////////////////////////////////////////////////////////
+                         client.println("<a href=http://10.0.0.9:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://69.245.183.113:8002/SdBrowse >SPIFFS Files</a><br />");
+                         client.println("<a href=http://10.0.0.9:8002/SdBrowse >Collected Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://69.245.183.113:8002/README.TXT download>Server:  README</a><br />");
+						 client.println("<a href=http://10.0.0.9:8002/Page1 >Graphed Weather Observations</a><br />");
+						 client.println("<br />\r\n");
+                         client.println("<a href=http://10.0.0.9:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
-                         client.print("<H2>Client IP:  <H2>");
+						 client.print("<H2>Client IP:  <H2>");
                          client.print(client.remoteIP().toString().c_str());
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -615,7 +647,7 @@ void listen()   // Listen for client connection
                          client.println("<body>\r\n");
                          client.println("<head><title>SDBrowse</title><head />");
                          // print all the files, use a helper to keep it clean
-                         client.println("<h2>SPIFFS Files:</h2>");
+                         client.println("<h2>Collected Observations</h2>");
                          
                          //////////////// Code to listFiles from martinayotte of the "ESP8266 Community Forum" ///////////////
                          String str = String("<html><head></head>\r\n");
@@ -642,7 +674,7 @@ void listen()   // Listen for client connection
                          
                          ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
+                         client.println("\n<a href=http://10.0.0.9:8002/Weather    >Current Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -651,6 +683,69 @@ void listen()   // Listen for client connection
                          fileDownload = 0;
 
                     }
+          // Check the action to see if it was a GET request.
+                    else if (strcmp(path, "/Page1") == 0) // Respond with the path that was accessed.
+                    {
+            // First send the success response code.
+                         client.println("HTTP/1.1 200 OK");
+                         client.println("Content-Type: html");
+                         client.println("Connnection: close");
+                         client.println("Server: WEMOS D1 R2");
+                         // Send an empty line to signal start of body.
+                         client.println("");
+                         // Now send the response data.
+                         // output dynamic webpage
+                         client.println("<!DOCTYPE HTML>");
+                         client.println("<html>\r\n");
+                         client.println("<body>\r\n");
+                         client.println("<head><title>Graphed Weather Observations</title></head>");
+                         // add a meta refresh tag, so the browser pulls again every 15 seconds:
+                         //client.println("<meta http-equiv=\"refresh\" content=\"15\">");
+						 client.println("<br />\r\n");
+						 client.println("<h2>Graphed Weather Observations, Page 1</h2><br />");
+             
+						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Temperature&type=line&xaxis=Date&yaxis=Degrees'></iframe>");
+						 client.println("<br />\r\n");
+						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Humidity&type=line&xaxis=Date&yaxis=Humidity'></iframe>");
+						 client.println("<br /><br />\r\n");
+                         client.println("\n<a href=http://10.0.0.9:8002/Page2    >Continue</a><br />");
+                         client.println("<br />\r\n");
+						 client.println("<body />\r\n");
+                         client.println("<br />\r\n");
+                         client.println("</html>\r\n");
+             
+          }
+          // Check the action to see if it was a GET request.
+                    else if (strcmp(path, "/Page2") == 0) // Respond with the path that was accessed.
+                    {
+            // First send the success response code.
+                         client.println("HTTP/1.1 200 OK");
+                         client.println("Content-Type: html");
+                         client.println("Connnection: close");
+                         client.println("Server: WEMOS D1 R2");
+                         // Send an empty line to signal start of body.
+                         client.println("");
+                         // Now send the response data.
+                         // output dynamic webpage
+                         client.println("<!DOCTYPE HTML>");
+                         client.println("<html>\r\n");
+                         client.println("<body>\r\n");
+                         client.println("<head><title>Graphed Weather Observations</title></head>");
+                         // add a meta refresh tag, so the browser pulls again every 15 seconds:
+                         //client.println("<meta http-equiv=\"refresh\" content=\"15\">");
+						 client.println("<br />\r\n");
+						 client.println("<h2>Graphed Weather Observations, Page 2</h2><br />");
+						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Barometric+Pressure&type=line&xaxis=Date&yaxis=Pressure'></iframe>");
+						 client.println("<br />\r\n");
+						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Dew+Point&type=line'></iframe>");
+						 client.println("<br /><br />\r\n"); 
+                         client.println("\n<a href=http://10.0.0.9:8002/Weather    >Return:  Current Observations</a><br />");
+                         client.println("<br />\r\n");
+						 client.println("<body />\r\n");
+                         client.println("<br />\r\n");
+                         client.println("</html>\r\n");
+             
+          }
                     else if((strncmp(path, "/LOG", 4) == 0) ||  (strcmp(path, "/ACCESS.TXT") == 0) || (strcmp(path, "/DIFFER.TXT") == 0)|| (strcmp(path, "/SERVER.TXT") == 0) || (strcmp(path, "/README.TXT") == 0))  // Respond with the path that was accessed.
                     {
 
@@ -671,10 +766,10 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
-                         else
-                         {
+                         else   
+                         { 
 
                               client.println("HTTP/1.1 200 OK");
                               client.println("Content-Type: text/plain");
@@ -690,7 +785,10 @@ void listen()   // Listen for client connection
 
                     }
                     // Check the action to see if it was a GET request.
-                    else  if(strncmp(path, "/noname", 8) == 0)
+					//////////////////////////////////////////////////////////////
+					//  Replace /zzzzzz with any variable other than "/ACCESS.TXT"
+					//////////////////////////////////////////////////////////////
+                    else  if(strncmp(path, "/zzzzzzz", 7) == 0)
                     {
                          //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                          //404 File not Found!
@@ -724,7 +822,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
@@ -972,37 +1070,74 @@ float updateDifference()  //Pressure difference for fifthteen minute interval
 }
 
 ////////////////////////////////
-void beep(unsigned char delayms)
+void beep(unsigned char delayms) 
 {
 
      // wait for a delayms ms
-     digitalWrite(sonalertPin, HIGH);       // High turns on Sonalert tone
+     digitalWrite(sonalertPin, HIGH);       
      delay(3000);
-     digitalWrite(sonalertPin, LOW);  //Low turns of Sonalert tone
+     digitalWrite(sonalertPin, LOW); 
 
+}
+
+//////////////////
+void speak()
+{
+     
+     char t_buffered1[14];
+     dtostrf(T, 7, 2, t_buffered1);
+   
+     char t_buffered2[14];
+     dtostrf(bme_humidity, 7, 2, t_buffered2);
+   
+     char t_buffered3[14];
+     dtostrf(currentPressure, 7, 2, t_buffered3);
+   
+     dp = (dew_point * 1.8) + 32;
+     char t_buffered4[14];
+     dtostrf(dp, 7, 2, t_buffered4);
+   
+     // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
+     // pieces of information in a channel.  Here, we write to field 1.
+     // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
+     // pieces of information in a channel.  Here, we write to field 1.
+     ThingSpeak.setField(1,t_buffered1);   //Temperature
+     ThingSpeak.setField(2,t_buffered2);   //Humidity
+     ThingSpeak.setField(3,t_buffered3);   //Barometric Pressure
+     ThingSpeak.setField(4,t_buffered4);   //Dew Point F.
+   
+     // Write the fields that you've set all at once.
+     ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+    
+     Serial.println("Sent data to Thinkspeak.com"); 
+    
+    
+    
 }
 
 /////////////
 void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
-     //Do file maintence on 1st day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
+     fileDownload = 1; 
+	 
+	 //Do file maintence on 1st day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
      if (dayofWeek == 6)
      {
           fileStore();
      }
-
-     //id = 1;   //Reset id for start of new day
+   
+   //id = 1;   //Reset id for start of new day
      //Write log Header
 
      // Open file for appended writing
-     File log = SPIFFS.open("LOG.TXT", "a"); 
+     File log = SPIFFS.open("/LOG.TXT", "a"); 
 
      if (!log)
      {
-          Serial.println("file open failed"); 
+          Serial.println("file open failed");   
      }
-   else 
+     else 
      {
           delay(1000);
           log.println(", , , , , ,"); //Just a leading blank line, in case there was previous data
@@ -1011,23 +1146,38 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
           Serial.println("");
           Serial.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, atm, Altitude");
     }
+	
+	fileDownload = 0;
+  
+  
 }
 
 ////////////////
-void fileStore()   //If 7th day of week, rename "log.txt" to ("log" + month + day + ".txt") and create new, empty "log.txt"
+void fileStore()   //If 6th day of week, rename "log.txt" to ("log" + month + day + ".txt") and create new, empty "log.txt"
 {
 
-          // rename the file "LOG.TXT"
+         // Open file for appended writing 
+     File log = SPIFFS.open("/LOG.TXT", "a"); 
+
+     if (!log)
+     {
+        Serial.println("file open failed"); 
+     }
+      
+      // rename the file "LOG.TXT"
           String logname;
           logname = "/LOG";
           logname += Clock.getMonth(Century);
           logname += Clock.getDate();
           logname += ".TXT";
           SPIFFS.rename("/LOG.TXT", logname.c_str());
+      log.close();
       
           //For troubleshooting
           //Serial.println(logname.c_str());
     
 }
+
+
 
 
