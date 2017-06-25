@@ -1,9 +1,7 @@
 # Observations
 Internet Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
 
-March 25, 2017 Current Features "Oberservations_SPIFFS.ino".
-
-
+June 25, 2017 Current Features "Oberservations_SPIFFS.ino".
 
 Requires WeMOS D1 R2 Developement Board, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature sensor (BME280).
 
@@ -26,5 +24,7 @@ Features:
  8. Audible alert from Piezo electric buzzer when there is Barometric Pressure difference of .020 inches of Mercury. I am interested in sudden drop of Barometric Pressure in a 15 minute interval.  Serve weather more likely with a sudden drop. Difference of .020 inches of Mercury point is set for my observations to log and sound audible alert; not based on any known value to be associated  with serve weather.
 
  9. Two-line LCD Display of Barometric Pressure, in both inches of Mercury and millibars.
+ 
+10. Tempature, Humidity, Barometric Pressure, and Dew Point have embedded "Thinkspeak.com" graphs.
 
 Server is a WeMOS D1 R2, Model 2.1.0 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 breakout board and DS3231 breakout board ~ $ 6.00; both are required for project. Sensor is located indoors, currently.
