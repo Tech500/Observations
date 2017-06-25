@@ -8,7 +8,7 @@
 //
 //                       https://www.wemos.cc/product/d1.html       
 //                        
-//                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
+//                       listFiles and readFile by martinayotte of ESP8266 Community Forum.               
 //                         
 //                       Observations_SPIFFS.ino  by tech500 
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
