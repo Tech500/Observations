@@ -1,14 +1,14 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                       Internet Weather Datalogger and Dynamic Web Server --ESP8266
-//                       Added sending of FAVICON.ICO   06/15/2017  @ 15:58 EST --ab9nq.william--at-gmail.com
+//                       Added sending of FAVICON.ICO   06/26/3017 @ 05:25 EST --ab9nq.william--at-gmail.com
 //   
 //
 //                       Supports WeMos D1 R2 Revison 2.1.0,   --ESP8266EX Based Developement Board 
 //
-//                       https://www.wemos.cc/product/d1.html       
+//                       https://www.wemos.cc/product/d1.html        
 //                        
-//                       listFiles and readFile by martinayotte of ESP8266 Community Forum.               
+//                       listFiles and readFile by martinayotte of ESP8266 Community Forum               
 //                         
 //                       Observations_SPIFFS.ino  by tech500 
 //                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
@@ -21,6 +21,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  Some lines require editing with your data.  Such as YourSSID, YourPassword, Your ThinkSpeak ChannelNumber, Your Thinkspeak API Key, Public IP, Forwarded Port,
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 // ********************************************************************************
 // ********************************************************************************
@@ -129,9 +130,8 @@ char action[MAX_ACTION+1];
 char path[MAX_PATH+1];
 
 
-//////////////////////////
+
 // Web Server on port 8002
-/////////////////////////
 WiFiServer server(8002);
 WiFiClient client;
 
@@ -148,8 +148,12 @@ WiFiClient client;
   Field 4 - Dew Point  (Degree F)
 */
 
+////////////////////////////////////////////////////////////////////////////
+//   Enter your ThingSpeak.com ChannelNumber and your ThingSpeak.com API Key
+///////////////////////////////////////////////////////////////////////////
 unsigned long myChannelNumber = xxxxxx;
 const char * myWriteAPIKey = "yyyyyyyyyyyyyy";
+
 
      
 ////////////////
@@ -610,22 +614,25 @@ void listen()   // Listen for client connection
                          client.println("Altitude:  ");
                          client.print(bme_altitude, 1);  //Convert meters to Feet      
                          client.print(" Feet<br />");
-                         //client.println("<br />");
                          client.println("<h2>Weather Observations</h2>");
 						 client.println("<h3>" + dtStamp + "  EST </h3>\r\n"); 
-						 ////////////////////////////////////////////////////////////////////////////
-						 //  Here is where your public IP could be used; along with a forwarded port.
-						 ////////////////////////////////////////////////////////////////////////////
+						 //////////////////////////////////////////////////////////////////////////////////////////////////
+						 //   Replace Server IP with Your Public IP and Forwarded Port; in all instances.
+						 //   Server IP is non-routeable; no Internet connectivity.  Use Public IP at your own risk!
+						 //////////////////////////////////////////////////////////////////////////////////////////////////
                          client.println("<a href=http://10.0.0.9:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<a href=http://10.0.0.9:8002/SdBrowse >Collected Observations</a><br />");
                          client.println("<br />\r\n");
-						 client.println("<a href=http://10.0.0.9:8002/Page1 >Graphed Weather Observations</a><br />");
+						 client.println("<a href=http://10.0.0.9:8002/Graphs >Graphed Weather Observations</a><br />");
 						 client.println("<br />\r\n");
                          client.println("<a href=http://10.0.0.9:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
-						 client.print("<H2>Client IP:  <H2>");
-                         client.print(client.remoteIP().toString().c_str());
+						 ///////////////////////////////////////////////////////////////////////////
+						 //   Optional, uncomment the next two lines to Display Client IP on web page
+						 //////////////////////////////////////////////////////////////////////////
+						 //client.print("<H2>Client IP:  <H2>");
+                         //client.print(client.remoteIP().toString().c_str());
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
                          client.println("</html>\r\n");
@@ -656,7 +663,7 @@ void listen()   // Listen for client connection
                          {
                               Serial.println("SPIFFS failed to mount !\r\n");
                          }
-                         Dir dir = SPIFFS.openDir("/");
+                         Dir dir = SPIFFS.openDir("/"); 
                          while (dir.next()) 
                          {
                               str += "<a href=\"";
@@ -683,10 +690,10 @@ void listen()   // Listen for client connection
                          fileDownload = 0;
 
                     }
-          // Check the action to see if it was a GET request.
-                    else if (strcmp(path, "/Page1") == 0) // Respond with the path that was accessed.
+					// Check the action to see if it was a GET request.
+                    else if (strcmp(path, "/Graphs") == 0) // Respond with the path that was accessed.
                     {
-            // First send the success response code.
+                        // First send the success response code.
                          client.println("HTTP/1.1 200 OK");
                          client.println("Content-Type: html");
                          client.println("Connnection: close");
@@ -702,51 +709,25 @@ void listen()   // Listen for client connection
                          // add a meta refresh tag, so the browser pulls again every 15 seconds:
                          //client.println("<meta http-equiv=\"refresh\" content=\"15\">");
 						 client.println("<br />\r\n");
-						 client.println("<h2>Graphed Weather Observations, Page 1</h2><br />");
-             
-						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Temperature&type=line&xaxis=Date&yaxis=Degrees'></iframe>");
-						 client.println("<br />\r\n");
-						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Humidity&type=line&xaxis=Date&yaxis=Humidity'></iframe>");
+						 client.println("<h2>Graphed Weather Observations</h2><br />");
+						 //client.println("<framset>\r\n");
+						 client.println("<frameset rows='30%,70%' cols='33%,34%'>");
+						 client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Temperature&type=line&xaxis=Date&yaxis=Degrees'></iframe>");
+						 client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Humidity&type=line&xaxis=Date&yaxis=Humidity'></iframe>");
+                         client.println("<p>");
+						 client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Barometric+Pressure&type=line&xaxis=Date&yaxis=Pressure'></iframe>");
+						 client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Dew+Point&type=line'></iframe>");
+						 client.println("</frameset>");
 						 client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8002/Page2    >Continue</a><br />");
+						 client.println("\n<a href=http://10.0.0.9:8002/Weather    >Continue</a><br />");
                          client.println("<br />\r\n");
+						 client.println("</p>");
 						 client.println("<body />\r\n");
                          client.println("<br />\r\n");
                          client.println("</html>\r\n");
              
-          }
-          // Check the action to see if it was a GET request.
-                    else if (strcmp(path, "/Page2") == 0) // Respond with the path that was accessed.
-                    {
-            // First send the success response code.
-                         client.println("HTTP/1.1 200 OK");
-                         client.println("Content-Type: html");
-                         client.println("Connnection: close");
-                         client.println("Server: WEMOS D1 R2");
-                         // Send an empty line to signal start of body.
-                         client.println("");
-                         // Now send the response data.
-                         // output dynamic webpage
-                         client.println("<!DOCTYPE HTML>");
-                         client.println("<html>\r\n");
-                         client.println("<body>\r\n");
-                         client.println("<head><title>Graphed Weather Observations</title></head>");
-                         // add a meta refresh tag, so the browser pulls again every 15 seconds:
-                         //client.println("<meta http-equiv=\"refresh\" content=\"15\">");
-						 client.println("<br />\r\n");
-						 client.println("<h2>Graphed Weather Observations, Page 2</h2><br />");
-						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Barometric+Pressure&type=line&xaxis=Date&yaxis=Pressure'></iframe>");
-						 client.println("<br />\r\n");
-						 client.println("<iframe width='450' height='260' style='border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Dew+Point&type=line'></iframe>");
-						 client.println("<br /><br />\r\n"); 
-                         client.println("\n<a href=http://10.0.0.9:8002/Weather    >Return:  Current Observations</a><br />");
-                         client.println("<br />\r\n");
-						 client.println("<body />\r\n");
-                         client.println("<br />\r\n");
-                         client.println("</html>\r\n");
-             
-          }
-                    else if((strncmp(path, "/LOG", 4) == 0) ||  (strcmp(path, "/ACCESS.TXT") == 0) || (strcmp(path, "/DIFFER.TXT") == 0)|| (strcmp(path, "/SERVER.TXT") == 0) || (strcmp(path, "/README.TXT") == 0))  // Respond with the path that was accessed.
+					}
+					else if((strncmp(path, "/LOG", 4) == 0) ||  (strcmp(path, "/ACCESS.TXT") == 0) || (strcmp(path, "/DIFFER.TXT") == 0)|| (strcmp(path, "/SERVER.TXT") == 0) || (strcmp(path, "/README.TXT") == 0))  // Respond with the path that was accessed.
                     {
 
                          fileDownload = 1;   //File download has started; used to stop log from logging during download
@@ -768,8 +749,8 @@ void listen()   // Listen for client connection
                               client.println("<br /><br />\r\n");
                               client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
-                         else   
-                         { 
+                         else
+                         {
 
                               client.println("HTTP/1.1 200 OK");
                               client.println("Content-Type: text/plain");
@@ -785,10 +766,7 @@ void listen()   // Listen for client connection
 
                     }
                     // Check the action to see if it was a GET request.
-					//////////////////////////////////////////////////////////////
-					//  Replace /zzzzzz with any variable other than "/ACCESS.TXT"
-					//////////////////////////////////////////////////////////////
-                    else  if(strncmp(path, "/zzzzzzz", 7) == 0)
+                    else  if(strncmp(path, "/Grey500", 7) == 0)
                     {
                          //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                          //404 File not Found!
@@ -1110,7 +1088,7 @@ void speak()
      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
     
      Serial.println("Sent data to Thinkspeak.com"); 
-    
+     
     
     
 }
@@ -1119,7 +1097,7 @@ void speak()
 void newDay()   //Collect Data for twenty-four hours; then start a new day
 {
 
-     fileDownload = 1; 
+     fileDownload = 1;
 	 
 	 //Do file maintence on 1st day of week at appointed time from RTC.  Assign new name to "log.txt."  Create new "log.txt."
      if (dayofWeek == 6)
