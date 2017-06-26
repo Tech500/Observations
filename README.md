@@ -1,5 +1,5 @@
 # Observations
-Internet Data Logger and Dynamic Web Server --ESP8266EX, utilizing SPIFFS.
+ESP8266EX --Internet Data Logger and Dynamic Web Server , utilizing SPIFFS.
 
 June 26, 2017 Current Features "Oberservations_SPIFFS.ino".
 
