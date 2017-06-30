@@ -17,12 +17,6 @@
 //                       project cost less than $15.00  
 //                                                                                    
 /////////////////////////////////////////////////////////////////////////////////////////////////////// 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  Some lines require editing with your data.  Such as YourSSID, YourPassword, Your ThinkSpeak ChannelNumber, Your Thinkspeak API Key, Public IP, Forwarded Port,
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 // ********************************************************************************
 // ********************************************************************************
 //
@@ -45,13 +39,12 @@
 #include "SPI.h"   //Part of Arduino Library Manager
 #include <ThingSpeak.h>   //https://github.com/mathworks/thingspeak-arduino
 
-////////////////////////////////////
 // Replace with your network details
-///////////////////////////////////
-const char* ssid = "YourSSID;
-const char* password = "YourPassword";
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
 
 float bme_pressure, bme_temp, bme_humidity, RHx, T, heat_index, dp, dew_point, bme_altitude;
+float altitude;   // Correction factor variable
 
 int count = 0;
 
@@ -136,10 +129,8 @@ WiFiServer server(8002);
 WiFiClient client;
 
 /*
-  ////////////////////////////////////////////////////////////////////////
-  //   xxxxxx being your ThinkSpeak ChannelNumber.  yyyyyyyyyyy being your ThinkSpeak API Key. 
   This is the ThingSpeak channel number for the MathwWorks weather station
-  https://thingspeak.com/channels/xxxxxx.  It senses a number of things and puts them in the eight
+  https://thingspeak.com/channels/290421.  It senses a number of things and puts them in the eight
   field of the channel:
   
   Field 1 - Temperature (Degrees F)
@@ -148,12 +139,8 @@ WiFiClient client;
   Field 4 - Dew Point  (Degree F)
 */
 
-////////////////////////////////////////////////////////////////////////////
-//   Enter your ThingSpeak.com ChannelNumber and your ThingSpeak.com API Key
-///////////////////////////////////////////////////////////////////////////
-unsigned long myChannelNumber = xxxxxx;
-const char * myWriteAPIKey = "yyyyyyyyyyyyyy";
-
+unsigned long myChannelNumber = 290421;
+const char * myWriteAPIKey = "LYRTHG76RTS69V0Z";
 
      
 ////////////////
@@ -362,7 +349,7 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
           log.print(bme_pressure * 0.00098692326671601, 3);   //Convert hPa to atm (atmospheric pressure)  
           log.print(" atm ");
           log.print(" , ");
-          log.print(bme_altitude, 1);  //Convert meters to Feet          
+          log.print(altitude, 1);  //Convert meters to Feet          
           log.print(" Ft. ");
           log.println();
           //Increment Record ID number
@@ -549,8 +536,6 @@ void listen()   // Listen for client connection
 
                          getWeatherData();
 
-                         delay(200);
-
                          fileDownload = 1;
                          
                          // First send the success response code.
@@ -571,7 +556,7 @@ void listen()   // Listen for client connection
                          client.println("<h2>Treyburn Lakes</h2><br />");
                          client.println("Indianapolis, IN 46239<br />");
 
-                         if(lastUpdate != NULL)
+                         if(lastUpdate != NULL) 
                          {
                               client.println("Last Update:  ");
                               client.println(lastUpdate);
@@ -612,25 +597,19 @@ void listen()   // Listen for client connection
                          client.print(bme_pressure * 0.00098692326671601, 2);   //Convert hPa to Atm (atmospheric pressure)
                          client.print(" atm <br />");
                          client.println("Altitude:  ");
-                         client.print(bme_altitude, 1);  //Convert meters to Feet      
+                         client.print(altitude, 1);  //Convert meters to Feet      
                          client.print(" Feet<br />");
+                         //client.println("<br />");
                          client.println("<h2>Weather Observations</h2>");
 						 client.println("<h3>" + dtStamp + "  EST </h3>\r\n"); 
-						 //////////////////////////////////////////////////////////////////////////////////////////////////
-						 //   Replace Server IP with Your Public IP and Forwarded Port; in all instances.
-						 //   Server IP is non-routeable; no Internet connectivity.  Use Public IP at your own risk!
-						 //////////////////////////////////////////////////////////////////////////////////////////////////
-                         client.println("<a href=http://10.0.0.9:8002/LOG.TXT download>Current Week Observations</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/LOG.TXT download>Current Week Observations</a><br />");
                          client.println("<br />\r\n");
-                         client.println("<a href=http://10.0.0.9:8002/SdBrowse >Collected Observations</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/SdBrowse >Collected Observations</a><br />");
                          client.println("<br />\r\n");
-						 client.println("<a href=http://10.0.0.9:8002/Graphs >Graphed Weather Observations</a><br />");
+						 client.println("<a href=http://69.245.183.113:8002/Graphs >Graphed Weather Observations</a><br />");
 						 client.println("<br />\r\n");
-                         client.println("<a href=http://10.0.0.9:8002/README.TXT download>Server:  README</a><br />");
+                         client.println("<a href=http://69.245.183.113:8002/README.TXT download>Server:  README</a><br />");
                          client.println("<br />\r\n");
-						 ///////////////////////////////////////////////////////////////////////////
-						 //   Optional, uncomment the next two lines to Display Client IP on web page
-						 //////////////////////////////////////////////////////////////////////////
 						 //client.print("<H2>Client IP:  <H2>");
                          //client.print(client.remoteIP().toString().c_str());
                          client.println("<body />\r\n");
@@ -681,7 +660,7 @@ void listen()   // Listen for client connection
                          
                          ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8002/Weather    >Current Observations</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
                          client.println("<br />\r\n");
                          client.println("<body />\r\n");
                          client.println("<br />\r\n");
@@ -719,7 +698,7 @@ void listen()   // Listen for client connection
 						 client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Dew+Point&type=line'></iframe>");
 						 client.println("</frameset>");
 						 client.println("<br /><br />\r\n");
-						 client.println("\n<a href=http://10.0.0.9:8002/Weather    >Continue</a><br />");
+						 client.println("\n<a href=http://69.245.183.113:8002/Weather    >Continue</a><br />");
                          client.println("<br />\r\n");
 						 client.println("</p>");
 						 client.println("<body />\r\n");
@@ -747,7 +726,7 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
                          else
                          {
@@ -800,7 +779,7 @@ void listen()   // Listen for client connection
                          delay(250);
                          client.println("<h2>File Not Found!</h2>\r\n");
                          client.println("<br /><br />\r\n");
-                         client.println("\n<a href=http://10.0.0.9:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
+                         client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                     }
                }
                else
@@ -1010,12 +989,14 @@ void getWeatherData()
      bme_temp     = bme.readTemperature();        // No correction factor needed for this sensor
      
      bme_humidity = bme.readHumidity();     // Plus a correction factor for this sensor
+	 
+	 bme_altitude = (bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084);   //Altitude in feet
      
      bme_pressure = (bme.readPressure() / 100);   
      
-     bme_altitude = ((bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084) -285.67);   //Altitude in feet
+     altitude = bme_altitude - 465;
 
-     delayTime = 5000;  
+     delayTime = 500;  
      
      T = (bme_temp * 9 / 5) + 32;   // Convert back to deg-F for the RH equation
      RHx = bme_humidity;   // Short form of RH for inclusion in the equation makes it easier to read
