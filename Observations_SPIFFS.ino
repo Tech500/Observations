@@ -158,7 +158,7 @@ void setup(void)
      
      pinMode(D3, INPUT_PULLUP); //Set input (SDA) pull-up resistor on
      //Wire.setClock(2000000); 
-     Wire.begin(D3, D4);
+     Wire.begin(D1, D2);
         
 /*
      Clock.setSecond(30);//Set the second 
