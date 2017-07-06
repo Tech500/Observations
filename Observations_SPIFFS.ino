@@ -1090,7 +1090,7 @@ void fileStore()   //If 6th day of week, rename "log.txt" to ("log" + month + da
 	//For troubleshooting
 	//Serial.println(logname.c_str());
 
-}
+} 
 
 
 
