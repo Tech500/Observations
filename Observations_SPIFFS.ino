@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                       Internet Weather Datalogger and Dynamic Web Server --ESP8266
-//                       Added sending of FAVICON.ICO   07/12/2017 @ 14:00 EST --ab9nq.william--at-gmail.com
+//                       Added sending of FAVICON.ICO   07/17/2017 @ 09:32 EST --ab9nq.william--at-gmail.com
 // 
 //
 //                       Supports WeMos D1 R2 Revison 2.1.0,   --ESP8266EX Based Developement Board
@@ -1036,24 +1036,28 @@ void getWeatherData()
 {
 
      bme_temp     = bme.readTemperature();        // temperature  is read in degrees Celsius
-
+     
+     delay(1000);
+     
      bme_pressure = bme.readPressure();   //pressure is read in Pascals
+
+     fahrenheit = ((bme_temp * 1.8 + 32) - 2.3);   //convert Celsius to Fahrenheit --subtract correction factor
      currentPressure = ((bme_pressure * 0.0002953) + .877);   //convert Pascals to inches mercury --add correction factor
      millibars = ((bme_pressure * .01) + 29.7);   //convert Pascals to millibars  --plus correction factor
 
      bme_altitude = ((bme.readAltitude(SEALEVELPRESSURE_HPA) * 3.28084) + 24.3 );   //altitude is read in meters --conversion to feet --plus correction factor
 
      bme_humidity = bme.readHumidity();
+     
      delayTime = 5000;
 
-     T = (bme_temp * 9 / 5) + 32;   // Convert back to deg-F for the RH equation
      RHx = bme_humidity;   // Short form of RH for inclusion in the equation makes it easier to read
-     heat_index = ((-42.379 + (2.04901523 * T) + (10.14333127*RHx) - (0.22475541 *T * RHx) - (0.00683783 * sq(T)) - (0.05481717 * sq(RHx)) + (0.00122874 * sq(T) * RHx) + (0.00085282 * T * sq(RHx)) - (0.00000199 * sq(T) * sq(RHx)) - 32) * 5/9);
-     if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
+     heat_index = -42.379 + (2.04901523 * fahrenheit) + (10.14333127*RHx) - (0.22475541 *fahrenheit * RHx) - (0.00683783 * sq(fahrenheit)) - (0.05481717 * sq(RHx)) + (0.00122874 * sq(fahrenheit) * RHx) + (0.00085282 * fahrenheit * sq(RHx)) - (0.00000199 * sq(fahrenheit) * sq(RHx));   
+     if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp * 1.8 + 32; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
      dew_point = (243.04 * (log(bme_humidity/100) + ((17.625 * bme_temp)/(243.04+bme_temp))) / (17.625-log(bme_humidity/100) - ((17.625 * bme_temp) / (243.04+bme_temp))));
-
+     dew = ((dew_point * 1.8 +32)- 2.3);   // correction factor - 1.0 degrees Fahrenheit
+     
 }
-
 ////////////////////////
 float updateDifference()  //Pressure difference for fifthteen minute interval
 {
