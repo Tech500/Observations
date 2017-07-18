@@ -42,10 +42,10 @@
 
 
 // Replace with your network details
-const char* ssid = "YourSSID";
-const char* password = "YourPassword";
+const char* ssid = "Security-22";
+const char* password = "1048acdc7388";
 
-float bme_pressure, millibars, bme_temp, bme_humidity, RHx, T, heat_index, dp, dew_point, bme_altitude;
+float bme_pressure, millibars, bme_temp, fahrenheit, bme_humidity, RHx, T, heat_index, dew, dew_point, bme_altitude;
 
 int count = 0;
 
@@ -133,7 +133,7 @@ WiFiClient client;
 
 /*
   This is the ThingSpeak channel number for the MathwWorks weather station
-  https://thingspeak.com/channels/YourChannelNumber.  It senses a number of things and puts them in the eight
+  https://thingspeak.com/channels/290421.  It senses a number of things and puts them in the eight
   field of the channel:
 
   Field 1 - Temperature (Degrees F)
@@ -142,10 +142,8 @@ WiFiClient client;
   Field 4 - Dew Point  (Degree F)
 */
 
-//edit ThingSpeak.com data here...
-unsigned long myChannelNumber = YourChannelNumber;
-const char * myWriteAPIKey = "YourAPIkey";
-
+unsigned long myChannelNumber = 290421;
+const char * myWriteAPIKey = "LYRTHG76RTS69V0Z";
 
 ////////////////
 void setup(void)
@@ -327,14 +325,14 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
           log.print(bme_humidity);
           log.print(" % , ");
           log.print("Dew Point:  ");
-          log.print(dew_point * 1.8 +32);
+          log.print(dew,1);
           log.print(" F. , ");
-          log.print(bme_temp * 1.8 + 32);
+          log.print(fahrenheit);
           log.print("  F. , ");
           // Reading temperature or humidity takes about 250 milliseconds!
           // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
           log.print("Heat Index:  ");
-          log.print(heat_index * 1.8 + 32);
+          log.print(heat_index);
           log.print(" F. ");
           log.print(" , ");
           log.print(currentPressure, 3);   //Inches of Mecury
@@ -560,13 +558,13 @@ void listen()   // Listen for client connection
                               client.print(bme_humidity, 1);
                               client.print(" %<br />");
                               client.println("Dew point:  ");
-                              client.print(dew_point * 1.8 +32, 1);
+                              client.print(dew, 1);
                               client.print(" F. <br />");
                               client.println("Temperature:  ");
-                              client.print(bme_temp * 1.8 + 32, 1);
+                              client.print(fahrenheit, 1);
                               client.print(" F.<br />");
                               client.println("Heat Index:  ");
-                              client.print(heat_index * 1.8 + 32, 1);
+                              client.print(heat_index);
                               client.print(" F. <br />");
                               client.println("Barometric Pressure:  ");
                               client.print(currentPressure, 3);   //Inches of Mercury
@@ -598,13 +596,13 @@ void listen()   // Listen for client connection
                               ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 						//replace xxx.xxx.xxx.xxxx:yyyy with your Public IP and Forwarded port  --Caution --know the risk ---
 						///////////////////////////////////////////////////////////////////////////////////////////////////////////
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/LOG.TXT download>Current Week Observations</a><br />");
+                              client.println("<a href=http://69.245.183.113:8002/LOG.TXT download>Current Week Observations</a><br />");
                               client.println("<br />\r\n");
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/SdBrowse >Collected Observations</a><br />");
+                              client.println("<a href=http://69.245.183.113:8002/SdBrowse >Collected Observations</a><br />");
                               client.println("<br />\r\n");
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/Graphs >Graphed Weather Observations</a><br />");
+                              client.println("<a href=http://69.245.183.113:8002/Graphs >Graphed Weather Observations</a><br />");
                               client.println("<br />\r\n");
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/README.TXT download>Server:  README</a><br />");
+                              client.println("<a href=http://69.245.183.113:8002/README.TXT download>Server:  README</a><br />");
                               client.println("<br />\r\n");
                               //client.print("<H2>Client IP:  <H2>");
                               //client.print(client.remoteIP().toString().c_str());
@@ -656,7 +654,7 @@ void listen()   // Listen for client connection
 
                               ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/Weather    >Current Observations</a><br />");
+                              client.println("\n<a href=http://69.245.183.113:8002/Weather    >Current Observations</a><br />");
                               client.println("<br />\r\n");
                               client.println("<body />\r\n");
                               client.println("<br />\r\n");
@@ -694,7 +692,7 @@ void listen()   // Listen for client connection
                               client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Dew+Point&type=line'></iframe>");
                               client.println("</frameset>");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/Weather    >Continue</a><br />");
+                              client.println("\n<a href=http://69.245.183.113:8002/Weather    >Continue</a><br />");
                               client.println("<br />\r\n");
                               client.println("</p>");
                               client.println("<body />\r\n");
@@ -722,7 +720,7 @@ void listen()   // Listen for client connection
                                    delay(250);
                                    client.println("<h2>File Not Found!</h2>\r\n");
                                    client.println("<br /><br />\r\n");
-                                   client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/SdBrowse    >Return to SPIFFS files list</a><br />");
+                                   client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                               }
                               else
                               {
@@ -741,7 +739,7 @@ void listen()   // Listen for client connection
 
                          }
                          // Check the action to see if it was a GET request.
-                         else  if(strncmp(path, "/Grey500", 7) == 0)
+                         else  if(strncmp(path, "/Grey123", 7) == 0)
                          {
                               //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                               //404 File not Found!
@@ -775,7 +773,7 @@ void listen()   // Listen for client connection
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("\n<a href=http://69.245.183.113:8002/SdBrowse    >Return to SPIFFS files list</a><br />");
                          }
                          exit;
                     }
@@ -1055,7 +1053,7 @@ void getWeatherData()
      heat_index = -42.379 + (2.04901523 * fahrenheit) + (10.14333127*RHx) - (0.22475541 *fahrenheit * RHx) - (0.00683783 * sq(fahrenheit)) - (0.05481717 * sq(RHx)) + (0.00122874 * sq(fahrenheit) * RHx) + (0.00085282 * fahrenheit * sq(RHx)) - (0.00000199 * sq(fahrenheit) * sq(RHx));   
      if ((bme_temp <= 26.66) || (bme_humidity <= 40)) heat_index = bme_temp * 1.8 + 32; // The convention is not to report heat Index when temperature is < 26.6 Deg-C or humidity < 40%
      dew_point = (243.04 * (log(bme_humidity/100) + ((17.625 * bme_temp)/(243.04+bme_temp))) / (17.625-log(bme_humidity/100) - ((17.625 * bme_temp) / (243.04+bme_temp))));
-     dew = ((dew_point * 1.8 +32)- 2.3);   // correction factor - 1.0 degrees Fahrenheit
+     dew = (((dew_point) * 1.8 +32)- 2.3);   // correction factor - 1.0 degrees Fahrenheit
      
 }
 ////////////////////////
@@ -1092,7 +1090,7 @@ void speak()
 {
 
      char t_buffered1[14];
-     dtostrf(T, 7, 2, t_buffered1);
+     dtostrf(fahrenheit, 7, 2, t_buffered1);
 
      char t_buffered2[14];
      dtostrf(bme_humidity, 7, 2, t_buffered2);
@@ -1100,9 +1098,8 @@ void speak()
      char t_buffered3[14];
      dtostrf(currentPressure, 7, 2, t_buffered3);
 
-     dp = (dew_point * 1.8) + 32;
      char t_buffered4[14];
-     dtostrf(dp, 7, 2, t_buffered4);
+     dtostrf(dew, 7, 2, t_buffered4);
 
      // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
      // pieces of information in a channel.  Here, we write to field 1.
