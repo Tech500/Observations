@@ -10,6 +10,7 @@
 //
 //                       https://www.wemos.cc/product/d1.html 
 //
+//                       http://robotdyn.com/catalog/boards/wifi_d1_r2_esp8266_dev_board_32m_flash/
 //
 //                       listFiles and readFile by martinayotte of ESP8266 Community Forum 
 //
