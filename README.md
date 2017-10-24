@@ -4,11 +4,11 @@ ESP8266 --Internet Weather Datalogger and Dynamic Web Server
 
 June 26, 2017 Current Features "Oberservations_SPIFFS.ino".
 
-Requires WeMOS D1 R2 Developement Board, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature sensor (BME280).
+Requires one WeMOS D1 R2 or one RobotDyn Wifi D1 R2 (both 32 mb) Developement Boards, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature sensor (BME280).
 
 Features:
 
- 1. Real Time Clock; used for 15 minute time interval, date and time stamping and dayofweek (every 7th day, log.txt file gets renamed to keep file size manageable.       Every Saturday (7th day of week)    log.txt gets renamed in the format "logxxyy" xx being the month and yy being the date; a new log.txt is created after every file renaming.
+ 1. NTP Time server used for 15 minute time interval, date and time stamping and dayofweek (every 7th day, log.txt file gets renamed to keep file size manageable.       Every Saturday (7th day of week)    log.txt gets renamed in the format "logxxyy" xx being the month and yy being the date; a new log.txt is created after every file renaming.
 
  2. Dynamic web page of current observations for Last update time and date, Humidity, dew point, temperature, heat index, barometric pressure (both inches of Mercury and millibars.)
 
@@ -28,7 +28,7 @@ Features:
  
 10. Tempature, Humidity, Barometric Pressure, and Dew Point have embedded "ThinkSpeak.com" Graphs on one web page.
 
-Server is a WeMOS D1 R2, Model 2.1.0 Development Board -- purchased on Ebay for ~ $ 9.00 and BME280 breakout board and DS3231 breakout board ~ $ 6.00; both are required for project. Sensor is located indoors, currently.
+BME280 Sensor is located indoors, currently.
 
 Project web page:  http://tinyurl.com/Observations-weather
 
