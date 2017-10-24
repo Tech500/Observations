@@ -2,7 +2,7 @@
 
 ESP8266 --Internet Weather Datalogger and Dynamic Web Server
 
-June 26, 2017 Current Features "Oberservations_SPIFFS.ino".
+October 23, 2017 Current Features "Oberservations_SPIFFS.ino".
 
 Requires one WeMOS D1 R2 or one RobotDyn Wifi D1 R2 (both 32 mb) Developement Boards, Real time clock (DS3231) and  Barometric Pressure, Humidity/Temperature sensor (BME280).
 
