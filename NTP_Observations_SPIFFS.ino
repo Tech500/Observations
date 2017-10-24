@@ -761,7 +761,7 @@ void listen()   // Listen for client connection
 
                          }
                          // Check the action to see if it was a GET request.
-                         else  if(strncmp(path, "/Grey111", 7) == 0)   //replace "zzzzzzz" with your choice.  Makes "ACCESS.TXT" a restricted file.
+                         else  if(strncmp(path, "/zzzzzzz", 7) == 0)   //replace "zzzzzzz" with your choice.  Makes "ACCESS.TXT" a restricted file.
                          {
                               //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                               //404 File not Found!
