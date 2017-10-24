@@ -184,20 +184,23 @@ const char * myWriteAPIKey = "YourAPIkey";
 ////////////////********************************************************************************
 void setup(void)
 {
-   
-     wdt_reset();
+
+     WiFi.mode(WIFI_AP); //switching to AP mode
+     WiFi.softAP(ssid, password); //initializing the AP with ssid and password. This will create a WPA2-PSK secured AP
+     
+     wdt_reset(); 
      
      Serial.begin(115200);   
      Serial.println("Starting...");
-     Serial.print("NTP_Observations.ino");
+     Serial.print("NTP_Observations_SPIFFS.ino");
      Serial.print("\n");
 
-     pinMode(online, OUTPUT); //Set pinMode to OUTPUT for online LED
+     pinMode(online, OUTPUT); //Set input (SDA) pull-up resistor on
 
-     pinMode(D2, INPUT_PULLUP); //Set input (SDA) pull-up resistor on GPIO_0 // Change this *! if you don't use a Wemos
+     pinMode(D3, INPUT_PULLUP); //Set input (SDA) pull-up resistor on GPIO_0 // Change this *! if you don't use a Wemos
 
      Wire.setClock(2000000);
-     Wire.begin(D2, D1);    ///Wire.begin(0, 2); //Wire.begin(sda,scl) // Change this *! if you don't use a Wemos
+     Wire.begin(D3, D4);    ///Wire.begin(0, 2); //Wire.begin(sda,scl) // Change this *! if you don't use a Wemos
 
      wdt_reset();
 
@@ -206,17 +209,9 @@ void setup(void)
      Serial.print("Connecting to ");
      Serial.println(ssid);
 
-     
-     
-     //WiFi.config(ip,gateway,subnet);
      WiFi.begin();
      delay(10);
      
-     //wifi.sta.config("Security","1048acdc7388");     
-     
-     //WiFi.mode(WIFI_AP); //switching to AP mode
-     //WiFi.softAP(ssid, password); //initializing the AP with ssid and password. This will create a WPA2-PSK secured AP
-
      while (WiFi.status() != WL_CONNECTED)
      {
           delay(500);
@@ -224,11 +219,12 @@ void setup(void)
      }
      Serial.println("");
      Serial.println("WiFi connected");
+     
 
      wdt_reset();
 
      // Starting the web server
-     server.begin();
+     //server.begin();
      Serial.println("Web server running. Waiting for the ESP IP...");
      
 
@@ -244,8 +240,7 @@ void setup(void)
      SPIFFS.begin();
 
      //SPIFFS.format();
-     //SPIFFS.remove("/ACCESS.TXT");
-     //SPIFFS.rename("/LOG715 TXT", "/LOG715.TXT");
+     //SPIFFS.remove("/LOG.TXT");
      
      if (!bme.begin(BMEADDRESS))
      {
