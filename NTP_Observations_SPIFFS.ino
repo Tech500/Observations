@@ -2,7 +2,7 @@
 //
 //                       ESP8266 --Internet Weather Datalogger and Dynamic Web Server  
 //
-//                       "NTP_Observations_SPIFFS.ino"    10//2/2017 @ 5:09 EST --ab9nq.william--at-gmail.com
+//                       "NTP_Observations_SPIFFS.ino"    10/23/2017 @ 5:09 EST --ab9nq.william--at-gmail.com
 //
 //                       Modified Wifi mode  
 //
