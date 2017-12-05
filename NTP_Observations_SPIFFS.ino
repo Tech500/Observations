@@ -1,24 +1,24 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//                       ESP8266 --Internet Weather Datalogger and Dynamic Web Server  
+//                       ESP8266 --Internet Weather Datalogger and Dynamic Web Server
 //
-//                       "NTP_Observations_SPIFFS.ino"    10/23/2017 @ 5:09 EST --ab9nq.william--at-gmail.com
+//                       "NTP_Observations_SPIFFS.ino"    12/04/2017 22:38 EST --ab9nq.william--at-gmail.com
 //
-//                       Modified Wifi mode  
+//                       Modified Wifi mode
 //
 //                       https://forum.arduino.cc/index.php?topic=466867.0     //Project discussion at arduino.cc
 //
 //                       Supports WeMos D1 R2 Revison 2.1.0 and RobotDyn WiFi D1 R2 32 MB   --ESP8266EX Baseds Developement Board
 //
-//                       https://www.wemos.cc/product/d1.html 
+//                       https://www.wemos.cc/product/d1.html
 //
 //                       http://robotdyn.com/catalog/boards/wifi_d1_r2_esp8266_dev_board_32m_flash/
 //
-//                       listFiles and readFile by martinayotte of ESP8266 Community Forum 
+//                       listFiles and readFile by martinayotte of ESP8266 Community Forum
 //
 //                       NTP useage with Timezones by zoomx of the Arduino.cc Forum
 //
-//                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500
+//                       Previous project:  "SdBrose_CC3000_HTTPServer.ino" by tech500" on https://github.com/tech500  
 //
 //                       Project is Open-Source, uses one Barometric Pressure sensor, BME280.
 //
@@ -30,6 +30,9 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  Some lines require editing with your data.  Such as YourSSID, YourPassword, Your ThinkSpeak ChannelNumber, Your Thinkspeak API Key, Public IP, Forwarded Port,
+//
+//   ***************************  Following lines will need to be edited: 63, 64, 137, 190, 191, and 797.  **************************************************
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ********************************************************************************
@@ -45,7 +48,7 @@
 
 #include <Wire.h>   //Part of the Arduino IDE software download
 #include "RTClib.h" //https://github.com/adafruit/RTClib. Get it using the Library Manager
-#include <TimeLib.h>        //Get it using the Library Manager. Use TimeLib instead of Time otherwise you will get errors in Timezone library
+#include <TimeLib.h>        
 #include <Timezone.h>    //https://github.com/JChristensen/Timezone
 #include <ESP8266WiFi.h>   //Part of ESP8266 Board Manager install
 #include <FS.h>   //Part of ESP8266-Arduino Core
@@ -59,6 +62,11 @@
 // Replace with your network details
 const char* ssid = "YourSSID";
 const char* password = "YourPassword";
+
+//setting the addresses
+IPAddress staticIP(10,0,0,87);
+IPAddress gateway(10,0,0, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 ///////////////////////////////////////////////////
 // Replace with your TimeZone details
@@ -79,14 +87,17 @@ float bme_pressure, millibars, bme_temp, fahrenheit, bme_humidity, RHx, T, heat_
 
 int count = 0;
 
+int error = 0;
+
 Adafruit_BME280 bme;
+
 #define BMEADDRESS 0x77 // Note Adafruit module I2C adress is 0x77 my module (eBay) uses 0x76
 
 unsigned long delayTime;
 
 #define SEALEVELPRESSURE_HPA (1013.25)   // Average millbars at Sea Level.  Check local weather service office.
 
-RTC_Millis Clock;   
+RTC_Millis Clock;
 
 bool Century = false;
 bool h12;
@@ -96,12 +107,14 @@ bool AcquisitionDone = false;
 int year1, month1, date1, hour1, minute1, second1;   //the original year, month ... are in conflict with TimeLib
 byte dayofWeek;
 
+int started;   //Used to tell if Server has started
+
 //use I2Cscanner to find LCD display address, in this case 3F   //https://github.com/todbot/arduino-i2c-scanner/
 //LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
 
 #define sonalert 9  // pin for Piezo buzzer
 
-#define online D6  //pin for online LED indicator
+#define online D7  //pin for online LED indicator
 
 #define BUFSIZE 64  //Size of read buffer for file download  -optimized for CC3000.
 
@@ -123,7 +136,9 @@ String fileRead;
 
 char MyBuffer[13];
 
-#define LISTEN_PORT           8002    // What TCP port to listen on for connections. // Change this *!
+String publicIP = "xxx.xxx.xxx.xxx";   //in-place of xxx.xxx.xxx.xxx put your Public IP address inside quotes
+
+#define LISTEN_PORT           yyyy  // in-place of yyyy put your listening port number
 // The HTTP protocol uses port 80 by default.
 
 #define MAX_ACTION            10      // Maximum length of the HTTP action that can be parsed.
@@ -147,7 +162,7 @@ char action[MAX_ACTION + 1];
 char path[MAX_PATH + 1];
 
 //NTP stuff
-unsigned int localPort = 123;      // local port to listen for UDP packets
+unsigned int localPort = 119;      // local port to listen for UDP packets
 unsigned long epoch;
 IPAddress timeServerIP; // time.nist.gov NTP server address
 const char* ntpServerName = "time.nist.gov";
@@ -155,8 +170,6 @@ const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of th
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 // A UDP instance to let us send and receive packets over UDP
 WiFiUDP udp;
-
-
 
 //////////////////////////
 // Web Server on port LISTEN_PORT
@@ -185,19 +198,16 @@ const char * myWriteAPIKey = "YourAPIkey";
 void setup(void)
 {
 
-     WiFi.mode(WIFI_AP); //switching to AP mode
-     WiFi.softAP(ssid, password); //initializing the AP with ssid and password. This will create a WPA2-PSK secured AP
-     
-     wdt_reset(); 
-     
-     Serial.begin(115200);   
+     wdt_reset();
+
+     Serial.begin(115200);
      Serial.println("Starting...");
-     Serial.print("NTP_Observations_SPIFFS.ino");
+     Serial.print("NTP_Observations.ino");
      Serial.print("\n");
 
-     pinMode(online, OUTPUT); //Set input (SDA) pull-up resistor on
+     pinMode(online, OUTPUT); //Set pinMode to OUTPUT for online LED
 
-     pinMode(D3, INPUT_PULLUP); //Set input (SDA) pull-up resistor on GPIO_0 // Change this *! if you don't use a Wemos
+     pinMode(D2, INPUT_PULLUP); //Set input (SDA) pull-up resistor on GPIO_0 // Change this *! if you don't use a Wemos
 
      Wire.setClock(2000000);
      Wire.begin(D3, D4);    ///Wire.begin(0, 2); //Wire.begin(sda,scl) // Change this *! if you don't use a Wemos
@@ -209,24 +219,30 @@ void setup(void)
      Serial.print("Connecting to ");
      Serial.println(ssid);
 
+     WiFi.mode(WIFI_AP); //switching to AP mode
+     WiFi.softAP(ssid, password); //initializing the AP with ssid and password. This will create a WPA2-PSK secured AP
+     WiFi.config(staticIP,gateway,subnet);
+
      WiFi.begin();
+
      delay(10);
-     
-     while (WiFi.status() != WL_CONNECTED)
+
+     if (WiFi.status() == WL_CONNECTED)
      {
-          delay(500);
-          Serial.print(".");
+          uint8_t macAddr[6];
+          WiFi.macAddress(macAddr);
+          Serial.printf("Connected, mac address: %02x:%02x:%02x:%02x:%02x:%02x\n", macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
      }
      Serial.println("");
      Serial.println("WiFi connected");
-     
 
      wdt_reset();
 
      // Starting the web server
-     //server.begin();
+     server.begin();
      Serial.println("Web server running. Waiting for the ESP IP...");
-     
+
+     started = 1;   //Server started
 
      // Printing the ESP IP address
      Serial.print("Server IP:  ");
@@ -239,33 +255,37 @@ void setup(void)
 
      SPIFFS.begin();
 
+     delay(1000);
+
      //SPIFFS.format();
-     //SPIFFS.remove("/LOG.TXT");
-     
+     //SPIFFS.remove("/SERVER.TXT");
+     //SPIFFS.rename("/LOG715 TXT", "/LOG715.TXT");
+
+
+
      if (!bme.begin(BMEADDRESS))
      {
           Serial.println("Could not find a valid BME280 sensor, check wiring!");
           while (1);
      }
 
-     //Begin listening for connection
-     server.begin();
-
      //lcdDisplay();      //   LCD 1602 Display function --used for inital display
 
      ThingSpeak.begin(client);
 
      Serial.println("Starting UDP for NTP client");
+
      udp.begin(localPort);
-     delayTime = 1000;
+
      Serial.print("Local port: ");
      Serial.println(udp.localPort());
-               
-     setClockWithNTP(); 
+
+     setClockWithNTP();
      AcquisitionDone = false;
-               
-     
+
+
 }
+
 
 
 // How big our line buffer should be. 100 is plenty!
@@ -277,16 +297,37 @@ void setup(void)
 void loop()
 {
 
-     
-     
+     //error = 0;
+
      udp.begin(localPort);
-     
+
      getDateTime();
-     
+
+     if(started == 1)
+     {
+
+          // Open a "log.txt" for appended writing
+          File log = SPIFFS.open("/SERVER.TXT", "a");
+
+
+
+          if (!log)
+          {
+               Serial.println("file open failed");
+          }
+
+          log.print("Started Server:  ");
+          log.println(dtStamp) + " EST";
+          log.close();
+
+     }
+
+     started = 0;   //only time started = 1 is when Server starts in setup
+
      //Serial.println("Returned to loop");
-     
+
      wdt_reset();
-     
+
      //Serial.println(dayofWeek);  //Check to see which dayofWeek starts is Saturday.  Saturday is 6 dayofWeek on DS3231.
 
      //Collect  "LOG.TXT" Data for one day; do it early (before 00:00:00) so day of week still equals 6.
@@ -296,8 +337,6 @@ void loop()
      {
           newDay();
      }
-     
-     //Serial.println(dayofWeek);  //Check to see which dayofWeek starts is Saturday.  Saturday is 6 dayofWeek on DS3231.
 
      //Write Data at 15 minute interval
 
@@ -308,31 +347,31 @@ void loop()
                && ((second1) == 0))
      {
 
-         if (AcquisitionDone == false) 
-         {
-              
-           lastUpdate = dtStamp;   //store dtstamp for use on dynamic web page
-           getWeatherData();
-           updateDifference();  //Get Barometric Pressure difference
-           logtoSD();   //Output to SPIFFS  --Log to SPIFFS on 15 minute interval.
-           delay(1);  //Be sure there is enough SPIFFS write time
-           speak();
-           AcquisitionDone = true;
-           setClockWithNTP();
-           
-         }
+          if (AcquisitionDone == false)
+          {
+
+               lastUpdate = dtStamp;   //store dtstamp for use on dynamic web page
+               getWeatherData();
+               updateDifference();  //Get Barometric Pressure difference
+               logtoSD();   //Output to SPIFFS  --Log to SPIFFS on 15 minute interval.
+               delay(1);  //Be sure there is enough SPIFFS write time
+               speak();
+               AcquisitionDone = true;
+               setClockWithNTP();
+
+          }
      }
      else
      {
-         AcquisitionDone = false;
-         delay(500);
-         
-         // Disable listen function prior to writing data to log file 
-         if (!((((minute1) == 14)||
-               ((minute1) == 29)||
-               ((minute1) == 44)||
-               ((minute1) == 59))
-               && ((second1) > 50)))
+          AcquisitionDone = false;
+          delay(500);
+
+          // Disable listen function prior to writing data to log file
+          if (!((((minute1) == 14)||
+                    ((minute1) == 29)||
+                    ((minute1) == 44)||
+                    ((minute1) == 59))
+                    && ((second1) > 50)))
           {
                listen();
           }
@@ -386,10 +425,10 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
           log.print(", ");
      }
 
-     log.print(millibars, 2);  //Convert hPA to millibars  
+     log.print(millibars, 2);  //Convert hPA to millibars
      log.print(" millibars ");
      log.print(" , ");
-     log.print(atm, 3);   
+     log.print(atm, 3);
      log.print(" Atm ");
      log.print(" , ");
      log.print(bme_altitude, 1);  //Convert meters to Feet
@@ -400,7 +439,7 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
      Serial.print("\n");
      Serial.println("Data written to log  " + dtStamp);
      Serial.print("\n");
-     
+
      log.close();
 
      pastPressure = currentPressure;
@@ -430,10 +469,10 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
           diff.print(dtStamp);
           diff.close();
 
-          beep(50);  //Duration of Sonalert tone 
+          beep(50);  //Duration of Sonalert tone
 
      }
-     
+
 }
 
 /*
@@ -463,7 +502,7 @@ void logtoSD()   //Output to SPIFFS Card every fifthteen minutes
 /////////////
 void listen()   // Listen for client connection
 {
-          
+
      client = server.available();
 
      while(client.available())
@@ -502,7 +541,7 @@ void listen()   // Listen for client connection
 
                }
 
-               if(parsed)
+               if(parsed)  
                {
 
                     // Check the action to see if it was a GET request.
@@ -513,7 +552,7 @@ void listen()   // Listen for client connection
 
                          String ip1String = "10.0.0.146";   //Host ip address
                          String ip2String = client.remoteIP().toString();   //client remote IP address
-                         
+
                          Serial.print("\n");
                          Serial.println("Client connected:  " + dtStamp);
                          Serial.print("Client IP:  ");
@@ -523,9 +562,6 @@ void listen()   // Listen for client connection
                          Serial.println(action);
                          Serial.print(F("Path: "));
                          Serial.println(path);
-
-                         accessLog();   //log-on details for "GET" HTTP request
-
 
                          // Check the action to see if it was a GET request.
                          if (strncmp(path, "/favicon.ico", 12) == 0)   // Respond with the path that was accessed.
@@ -539,14 +575,13 @@ void listen()   // Listen for client connection
                               client.println();
 
                               wdt_reset();
-                              
+
                               readFile();
 
                          }
                          // Check the action to see if it was a GET request.
                          if (strncmp(path, "/Weather", 8) == 0)   // Respond with the path that was accessed.
                          {
-
 
                               getWeatherData();
 
@@ -564,7 +599,7 @@ void listen()   // Listen for client connection
                               client.println("<!DOCTYPE HTML>");
                               client.println("<html>\r\n");
                               client.println("<body>\r\n");
-                              client.println("<head><title>Weather Observations</title></head>");
+                              client.println("<head><title><h3>Weather Observations<h3></title></head>");
                               // add a meta refresh tag, so the browser pulls again every 15 seconds:
                               //client.println("<meta http-equiv=\"refresh\" content=\"15\">");
                               client.println("<h2>Treyburn Lakes</h2><br />");
@@ -608,7 +643,7 @@ void listen()   // Listen for client connection
                               client.println(millibars, 1);   //Convert hPA to millbars
                               client.println(" mb.<br />");
                               client.println("Atmosphere:  ");
-                              client.print(atm, 2);   
+                              client.print(atm, 2);
                               client.print(" Atm <br />");
                               client.println("Altitude:  ");
                               client.print(bme_altitude, 1);  //Convert meters to Feet
@@ -619,25 +654,28 @@ void listen()   // Listen for client connection
                               ///////////////////////////////////////////////////////////////////////////////////////////////////////////
                               //replace xxx.xxx.xxx.xxxx:yyyy with your Public IP and Forwarded port  --Caution --know the risk ---
                               ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/LOG.TXT download>Current Week Observations</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/LOG.TXT download>Current Week Observations</a><br />");
                               client.println("<br />\r\n");
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/SdBrowse >Collected Observations</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/SdBrowse >Collected Observations</a><br />");
                               client.println("<br />\r\n");
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/Graphs >Graphed Weather Observations</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/Graphs >Graphed Weather Observations</a><br />");
                               client.println("<br />\r\n");
-                              client.println("<a href=http://xxx.xxx.xxx.xxx:yyyy/README.TXT download>Server:  README</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/README.TXT download>Server:  README</a><br />");
                               client.println("<br />\r\n");
+                              //Show IP Adress on client screen
                               //client.print("<H2>Client IP:  <H2>");
                               //client.print(client.remoteIP().toString().c_str());
                               client.println("<body />\r\n");
                               client.println("<br />\r\n");
                               client.println("</html>\r\n");
 
+                              error = 0;
+
                          }
                          // Check the action to see if it was a GET request.
                          else if (strcmp(path, "/SdBrowse") == 0)   // Respond with the path that was accessed.
                          {
-                              
+
                               // send a standard http response header
                               client.println("HTTP/1.1 200 OK");
                               client.println("Content-Type: text/html");
@@ -674,17 +712,19 @@ void listen()   // Listen for client connection
 
                               ////////////////// End code by martinayotte //////////////////////////////////////////////////////
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/Weather    >Current Observations</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/Weather    >Current Observations</a><br />");
                               client.println("<br />\r\n");
                               client.println("<body />\r\n");
                               client.println("<br />\r\n");
                               client.println("</html>\r\n");
+            
+                              error = 0;
 
                          }
                          // Check the action to see if it was a GET request.
                          else if (strcmp(path, "/Graphs") == 0)   // Respond with the path that was accessed.
                          {
-                              
+
                               // First send the success response code.
                               client.println("HTTP/1.1 200 OK");
                               client.println("Content-Type: html");
@@ -711,13 +751,14 @@ void listen()   // Listen for client connection
                               client.println("<iframe width='450' height='260' 'border: 1px solid #cccccc;' src='https://thingspeak.com/channels/290421/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&timescale=15&title=Dew+Point&type=line'></iframe>");
                               client.println("</frameset>");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/Weather    >Current Observations</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/Weather    >Current Observations</a><br />");
                               client.println("<br />\r\n");
                               client.println("</p>");
                               client.println("<body />\r\n");
                               client.println("<br />\r\n");
                               client.println("</html>\r\n");
-                              
+
+
                          }
                          else if((strncmp(path, "/LOG", 4) == 0) ||  (strcmp(path, "/ACCESS.TXT") == 0) || (strcmp(path, "/DIFFER.TXT") == 0)|| (strcmp(path, "/SERVER.TXT") == 0) || (strcmp(path, "/README.TXT") == 0))     // Respond with the path that was accessed.
                          {
@@ -727,7 +768,7 @@ void listen()   // Listen for client connection
                               strcpy( MyBuffer, path );
                               filename = &MyBuffer[1];
 
-                              if ((strncmp(path, "/SYSTEM~1", 9) == 0) || (strncmp(path, "/ACCESS", 7) == 0))
+                              if ((strncmp(path, "/FAVICON.ICO", 12) == 0) || (strncmp(path, "/SYSTEM~1", 9) == 0) || (strncmp(path, "/ACCESS", 7) == 0))
                               {
 
                                    client.println("HTTP/1.1 404 Not Found");
@@ -737,7 +778,11 @@ void listen()   // Listen for client connection
                                    delay(250);
                                    client.println("<h2>File Not Found!</h2>\r\n");
                                    client.println("<br /><br />\r\n");
-                                   client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/SdBrowse    >Return to SPIFFS files list</a><br />");
+                                   client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/SdBrowse    >Return to SPIFFS files list</a><br />");
+
+                                   error = 1;
+
+
                               }
                               else
                               {
@@ -749,14 +794,14 @@ void listen()   // Listen for client connection
                                    client.println("Connnection: close");
                                    client.println();
 
-
                                    readFile();
 
                               }
 
                          }
                          // Check the action to see if it was a GET request.
-                         else  if(strncmp(path, "/zzzzzzz", 7) == 0)   //replace "zzzzzzz" with your choice.  Makes "ACCESS.TXT" a restricted file.
+                         else  if(strncmp(path, "/zzzzzz", 7) == 0)   //replace "/zzzzzz" with your choice.  Makes "ACCESS.TXT" a restricted file.  Use this for private access to remote IP file.
+                              //
                          {
                               //Restricted file:  "ACCESS.TXT."  Attempted access from "Server Files:" results in
                               //404 File not Found!
@@ -772,7 +817,7 @@ void listen()   // Listen for client connection
                               client.println();
 
                               wdt_reset();
-                              
+
                               readFile();
                          }
                          else
@@ -781,22 +826,26 @@ void listen()   // Listen for client connection
                               delay(1000);
 
                               // everything else is a 404
-                              client.println("HTTP/1.1 404 Not Found");  
+                              client.println("HTTP/1.1 404 Not Found");
                               client.println("Content-Type: text/html");
                               client.println();
                               client.println("<h2>404</h2>\r\n");
                               delay(250);
                               client.println("<h2>File Not Found!</h2>\r\n");
                               client.println("<br /><br />\r\n");
-                              client.println("\n<a href=http://xxx.xxx.xxx.xxx:yyyy/SdBrowse    >Return to SPIFFS files list</a><br />");
+                              client.println("<a href=http://" + publicIP + ":" + LISTEN_PORT + "/SdBrowse    >Return to SPIFFS files list</a><br />");
+
+                              error = 1;
+
+
                          }
-                         exit;
+
                     }
                     else
                     {
                          // Unsupported action, respond with an HTTP 405 method not allowed error.
-                         
-                         
+
+
                          client.println("HTTP/1.1 405 Method Not Allowed");
                          client.println("");
                          delay(1000);
@@ -806,9 +855,10 @@ void listen()   // Listen for client connection
 
                          digitalWrite(online, HIGH);   //turn-on online LED indicator
 
-                         accessLog();   //log for, log-on details for "Method Not Allowed," HTTP request
+             error = 2;
 
                     }
+                    accessLog();
                }
                // Wait a short period to make sure the response had time to send before
                // the connection is closed .
@@ -823,20 +873,17 @@ void listen()   // Listen for client connection
                digitalWrite(online, LOW);   //turn-off online LED indicator
 
                Serial.println("Client closed");
-                              
+
                setClockWithNTP();
                AcquisitionDone = false;
-               
+
                delay(500);
 
           }
 
      }
-     
 
-     
 }
-
 
 //********************************************************************
 //////////////////////////////////////////////////////////////////////
@@ -887,7 +934,7 @@ void parseFirstLine(char* line, char* action, char* path)
 void accessLog()
 {
      getDateTime();
-      
+
      String ip1String = "10.0.0.146";   //Host ip address
      String ip2String = client.remoteIP().toString();   //client remote IP address
 
@@ -909,7 +956,7 @@ void accessLog()
      else
      {
           //Serial.println("IP address that do not match ->log client ip address");
-         
+
           logFile.print("Accessed:  ");
           logFile.print(dtStamp + " -- ");
           logFile.print("Client IP:  ");
@@ -920,13 +967,40 @@ void accessLog()
           logFile.print(" -- ");
           logFile.print("Path:  ");
           logFile.print(path);
-          logFile.println("");          
-          logFile.close();
-          
-          
-     }
-}
 
+          //Serial.println("Error = " + (String)error);
+
+
+          if ((error == 1) || (error == 2))
+          {
+
+               if(error == 1)
+               {
+
+                    Serial.println("Error 404");
+                    logFile.print("  Error 404");
+                    error = 0;
+
+               }
+
+               if(error == 2)
+               {
+
+                    Serial.println("Error 405");
+                    logFile.print("  Error 405");
+
+               }
+
+          }
+
+          error = 0;
+
+          logFile.println("");
+          logFile.close();
+
+     }
+
+}
 
 ///////////////********************************************************************
 void readFile()
@@ -961,6 +1035,8 @@ void readFile()
           }
           webFile.close();
      }
+
+     error = 0;
 
      delayTime = 1000;
 
@@ -1035,7 +1111,7 @@ String getDateTime()
           SHour = (String)temp;
      }
 
-     temp = (minute1);  
+     temp = (minute1);
      if (temp < 10)
      {
           SMin = ("0" + (String)temp);
@@ -1064,7 +1140,7 @@ String getDateTime()
 void getWeatherData()
 {
 
-     bme_temp     = bme.readTemperature();        // temperature  is read in degrees Celsius
+     bme_temp = bme.readTemperature();        // temperature  is read in degrees Celsius
 
      delay(1000);
 
@@ -1108,7 +1184,7 @@ float updateDifference()  //Pressure difference for fifthteen minute interval
 }
 
 ////////////////////////////////
-void beep(unsigned char delayms) 
+void beep(unsigned char delayms)
 {
 
      // wait for a delayms ms
@@ -1147,8 +1223,8 @@ void speak()
      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
 
      Serial.println("Sent data to Thingspeak.com\n");
-     
-}     
+
+}
 
 /////////////
 void newDay()   //Collect Data for twenty-four hours; then start a new day
@@ -1168,7 +1244,7 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
 
      if (!log)
      {
-          Serial.println("file open failed"); 
+          Serial.println("file open failed");
      }
      else
      {
@@ -1178,7 +1254,8 @@ void newDay()   //Collect Data for twenty-four hours; then start a new day
           log.close();
           Serial.println("");
           Serial.println("Date, Time, Humidity, Dew Point, Temperature, Heat Index, in. Hg., Difference, millibars, Atm, Altitude");
-     }    Serial.println("\n");
+     }
+     Serial.println("\n");
 
 }
 
@@ -1233,29 +1310,35 @@ unsigned long sendNTPpacket(IPAddress& address)
      // you can send a packet requesting a timestamp:
      udp.beginPacket(address, 123); //NTP requests are to port 123
      udp.write(packetBuffer, NTP_PACKET_SIZE);
-     udp.endPacket(); 
+     udp.endPacket();
 }
 
 
 //************************************************************************
-void setClockWithNTP()   
+void setClockWithNTP()
 {
      WiFi.hostByName(ntpServerName, timeServerIP);
 
      sendNTPpacket(timeServerIP); // send an NTP packet to a time server
      // wait to see if a reply is available
-     delay(1000);
+     delay(3000);
 
      int cb = udp.parsePacket();
-     
+
+     int noPacket = 0;
+
+
      if (cb != 48)   // was if(!cb)  --testing cb != 48  --Packet length of 48 known good.
      {
           Serial.println("no packet yet");
+          noPacket = 1;
+          setClockWithNTP();
 
      }
-     else 
+
+     if(noPacket == 0)
      {
-          Serial.print("packet received, length = "); 
+          Serial.print("packet received, length = ");
           Serial.println(cb);
           // We've received a packet, read the data from it
           udp.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
@@ -1292,8 +1375,11 @@ void setClockWithNTP()
           Serial.println(dtStamp);
           Serial.print("\n");
 
+          noPacket = 1;
+
           // following line sets the RTC to the date & time this sketch was compiled
           //Clock.begin(DateTime(epoch));
-          
+
      }
 }
+
