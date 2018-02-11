@@ -6,7 +6,7 @@ Current Features "NTP_Oberservations_SPIFFS.ino".
 
 Requires RobotDyn D1 R2 Developement Board or Wemos D1 R2 Developement Board and Adafruit BME280, Barometric Pressure, Humidity, and Temperature sensor.
 
- 1. Real Time Clock; used for 15 minute time interval, date and time stamping and dayofweek (every 6th day, "LOG.TXT" file gets renamed to keep file size manageable.   Every Saturday "LOG.TXT" gets renamed in the format "logxxyy" xx being the month and yy being the date; a new log.txt is created after every file renaming.
+ 1. NTP and time server; used for 15 minute time interval, date and time stamping and dayofweek (every 6th day, "LOG.TXT" file gets renamed to keep file size manageable.   Every Saturday "LOG.TXT" gets renamed in the format "logxxyy" xx being the month and yy being the date; a new log.txt is created after every file renaming.
 
  2. Dynamic web page of current observations for Last update time and date, humidity, dew point, temperature, heat index, barometric pressure (both inches of Mercury and millibars.)
 
